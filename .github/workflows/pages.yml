@@ -1,4 +1,4 @@
-name: Deploy NOVIQ 1.0 to GitHub Pages
+name: Deploy NOVIQ to GitHub Pages
 
 on:
   push:
