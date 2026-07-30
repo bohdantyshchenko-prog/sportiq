@@ -2,313 +2,101 @@
 <html lang="ru" data-theme="dark">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#070910" />
-  <meta name="description" content="NOVIQ — персональная система спортивного интеллекта: Match Thesis, Decision Replay, Sports IQ и Sports Memory." />
+  <meta name="description" content="NOVIQ 1.1 — персональная система спортивного интеллекта: Match Thesis, Decision Replay, Sports IQ и Sports Memory." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="NOVIQ" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="styles.css" />
-  <title>NOVIQ 1.0 — Sports Intelligence</title>
+  <title>NOVIQ 1.1 — Intelligence Loop</title>
 </head>
 <body>
-  <div class="ambient" aria-hidden="true">
-    <span class="aurora aurora-a"></span>
-    <span class="aurora aurora-b"></span>
-    <span class="grid-glow"></span>
-  </div>
-
+  <div class="ambient" aria-hidden="true"><span class="aurora aurora-a"></span><span class="aurora aurora-b"></span><span class="grid-glow"></span></div>
   <main class="app-shell" id="appShell">
     <header class="topbar">
-      <button class="profile-chip pressable" data-action="open-profile" aria-label="Открыть профиль">
-        <span class="avatar-ring"><span class="avatar-core">Б</span></span>
-        <span class="profile-copy">
-          <strong data-i18n="hello">Привет, Богдан</strong>
-          <small data-i18n="eliteProfile">Elite Intelligence</small>
-        </span>
-      </button>
-
+      <button class="brand pressable" data-action="go-home" aria-label="NOVIQ home"><span>NO</span><b>VIQ</b><i>1.1</i></button>
       <div class="top-actions">
-        <button class="icon-button pressable" data-action="toggle-theme" aria-label="Переключить тему">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5-.04-1-.12-1.47A7 7 0 0 1 13.47 3.1 9.8 9.8 0 0 0 12 3Z"/></svg>
-        </button>
-        <button class="icon-button pressable notification-button" data-action="open-notifications" aria-label="Уведомления">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/></svg>
-          <span class="notification-dot"></span>
-        </button>
+        <button class="icon-button pressable" data-action="open-notifications" aria-label="Notifications"><span>◌</span><i class="notification-dot"></i></button>
+        <button class="avatar-button pressable" data-action="open-profile" aria-label="Profile"><span>BT</span></button>
       </div>
     </header>
 
-    <section class="page active" data-page="home" aria-label="Главная">
+    <section class="page active" data-page="home">
       <div class="page-scroll">
-        <section class="hero-card glass-card reveal">
-          <div class="hero-noise" aria-hidden="true"></div>
-          <div class="hero-topline">
-            <span class="eyebrow"><span class="live-dot"></span><span data-i18n="personalIntelligence">PERSONAL INTELLIGENCE</span></span>
-            <button class="text-button pressable" data-action="open-diagnostic" data-i18n="recheck">Перепроверить</button>
+        <section class="hero intelligence-hero">
+          <div class="hero-topline"><span class="eyebrow" data-i18n="personalIntelligence">PERSONAL INTELLIGENCE</span><span class="status-chip"><i></i><span data-i18n="adaptiveActive">Adaptive model active</span></span></div>
+          <div class="hero-profile">
+            <div><h1 data-i18n="hello">Привет, Богдан</h1><p data-i18n="heroSubtitle">Твоя модель футбольного мышления обновляется после каждого решения.</p></div>
+            <button class="ghost-button pressable" data-action="open-diagnostic" data-i18n="reassess">Диагностика</button>
           </div>
-          <div class="hero-main">
-            <div>
-              <p class="hero-label" data-i18n="sportsIQ">SPORTS IQ</p>
-              <div class="score-line">
-                <strong id="sportsIqValue">8 542</strong>
-                <span class="score-delta">+124</span>
-              </div>
-              <p class="hero-caption" data-i18n="iqCaption">Выше 91% активных аналитиков</p>
-            </div>
-            <div class="iq-orbit" aria-label="Sports IQ progress">
-              <svg viewBox="0 0 120 120" role="img" aria-hidden="true">
-                <circle class="orbit-track" cx="60" cy="60" r="48"></circle>
-                <circle class="orbit-progress" cx="60" cy="60" r="48"></circle>
-              </svg>
-              <div class="orbit-center"><span>ELITE</span><b>91%</b></div>
-            </div>
+          <div class="iq-layout">
+            <div class="iq-orbit"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="51"></circle><circle class="iq-progress" cx="60" cy="60" r="51"></circle></svg><div><strong id="sportsIqValue">8 542</strong><small>SPORTS IQ</small></div></div>
+            <div class="skill-mini-list" id="heroSkillList"></div>
           </div>
-          <div class="skill-strip" id="skillStrip">
-            <button class="skill-pill pressable" data-skill="tactical"><span>Tactical</span><b>8.9</b></button>
-            <button class="skill-pill pressable" data-skill="context"><span>Context</span><b>7.4</b></button>
-            <button class="skill-pill pressable" data-skill="data"><span>Data</span><b>8.1</b></button>
-            <button class="skill-pill pressable" data-skill="decision"><span>Decision</span><b>8.3</b></button>
-          </div>
+          <div class="hero-footer"><span id="iqConfidenceLabel">Model confidence 74%</span><span id="nextMilestone">358 IQ до Master Analyst</span></div>
         </section>
 
-        <section class="section reveal">
-          <div class="section-heading">
-            <div><span class="kicker">WORLD CUP 2026</span><h2 data-i18n="worldCup">World Cup Command Center</h2></div>
-            <button class="round-link pressable" data-action="open-command-center" aria-label="Открыть Command Center">↗</button>
-          </div>
-          <article class="command-card premium-card pressable" data-action="open-command-center">
-            <div class="command-visual">
-              <div class="trophy-mark">✦</div>
-              <div class="map-lines" aria-hidden="true"></div>
-            </div>
-            <div class="command-copy">
-              <span class="badge badge-gold" data-i18n="tournamentMode">TOURNAMENT MODE</span>
-              <h3 data-i18n="worldCupTitle">Твой интеллект на главном турнире</h3>
-              <p data-i18n="worldCupText">Персональные сценарии, скрытые риски и турнирная память без перегрузки новостями.</p>
-              <div class="mini-stats"><span><b>12</b><small data-i18n="matchesAnalyzed">матчей разобрано</small></span><span><b>74%</b><small data-i18n="scenarioAccuracy">точность сценариев</small></span></div>
-            </div>
+        <section class="section">
+          <div class="section-head"><div><span class="eyebrow">INTELLIGENCE LOOP</span><h2 data-i18n="currentLoop">Твой текущий цикл</h2></div><button class="text-button pressable" data-action="open-loop-map" data-i18n="howItWorks">Как работает</button></div>
+          <article class="loop-card" id="loopCard"></article>
+        </section>
+
+        <section class="section">
+          <div class="section-head"><div><span class="eyebrow">MATCH OF THE DAY</span><h2>Manchester City — Real Madrid</h2></div><span class="time-chip">21:45</span></div>
+          <article class="match-hero-card">
+            <div class="match-glow"></div>
+            <div class="match-meta"><span>Champions League · Demo Match</span><span>Intelligence value 94</span></div>
+            <div class="match-main"><div class="team"><span class="crest crest-blue">MCI</span><b>Manchester City</b><small>Control & overloads</small></div><div class="match-center"><span>VS</span><b>21:45</b><small>Today</small></div><div class="team"><span class="crest crest-gold">RMA</span><b>Real Madrid</b><small>Transitions & depth</small></div></div>
+            <div class="match-signals"><span><i>68%</i> City territorial control</span><span><i>High</i> transition risk</span><span><i>Open</i> lineup uncertainty</span></div>
+            <div class="action-row"><button class="secondary-button pressable" data-action="open-briefing">AI Briefing</button><button class="primary-button pressable" data-action="open-thesis">Create Match Thesis →</button></div>
           </article>
         </section>
 
-        <section class="section reveal">
-          <div class="section-heading">
-            <div><span class="kicker" data-i18n="matchOfDay">MATCH OF THE DAY</span><h2 data-i18n="aiBriefing">AI Briefing</h2></div>
-            <button class="text-button pressable" data-action="refresh-briefing" data-i18n="refresh">Обновить</button>
-          </div>
-          <article class="match-card premium-card">
-            <div class="match-meta">
-              <span class="badge"><span class="live-dot"></span>21:45</span>
-              <span>Champions League · Intelligence 94</span>
-            </div>
-            <div class="match-teams">
-              <div class="team">
-                <div class="crest crest-city"><span>MCI</span></div>
-                <strong>Manchester City</strong>
-                <small>Home</small>
-              </div>
-              <div class="versus"><span>VS</span><b>21:45</b><small data-i18n="today">Сегодня</small></div>
-              <div class="team">
-                <div class="crest crest-madrid"><span>RMA</span></div>
-                <strong>Real Madrid</strong>
-                <small>Away</small>
-              </div>
-            </div>
-            <div class="briefing-grid">
-              <button class="briefing-insight pressable" data-action="open-insight" data-insight="scenario">
-                <span class="insight-icon">◎</span><span><small data-i18n="mainScenario">Главный сценарий</small><b data-i18n="scenarioText">Контроль City против переходов Madrid</b></span>
-              </button>
-              <button class="briefing-insight pressable" data-action="open-insight" data-insight="risk">
-                <span class="insight-icon warning">!</span><span><small data-i18n="hiddenRisk">Скрытый риск</small><b data-i18n="riskText">Пространство после потери в центре</b></span>
-              </button>
-            </div>
-            <div class="match-actions">
-              <button class="secondary-button pressable" data-action="open-match-detail" data-i18n="fullBriefing">Полный briefing</button>
-              <button class="primary-button pressable" data-action="open-thesis"><span data-i18n="createThesis">Создать Thesis</span><i>→</i></button>
-            </div>
+        <section class="section split-section">
+          <article class="feature-card calibration-card pressable" data-action="open-calibration">
+            <div class="feature-icon">◉</div><span class="eyebrow">CONFIDENCE LAB</span><h3 data-i18n="calibrationTitle">Точность твоей уверенности</h3><div class="calibration-number"><strong id="calibrationValue">72%</strong><span id="calibrationDelta">+4 this month</span></div><div class="micro-chart" id="miniCalibrationChart"></div><p data-i18n="calibrationCopy">Ты точен в диапазоне 60–70%, но переуверен выше 80%.</p>
+          </article>
+          <article class="feature-card mission-card pressable" data-action="open-mission">
+            <div class="feature-icon">◇</div><span class="eyebrow">PERSONAL MISSION</span><h3 id="missionTitle">Назови альтернативный сценарий</h3><p id="missionCopy">Сделай это в следующем Thesis, чтобы усилить Decision IQ.</p><div class="mission-progress"><i id="missionProgressBar"></i></div><small id="missionProgressText">0/1 completed</small>
           </article>
         </section>
 
-        <section class="section reveal">
-          <div class="section-heading">
-            <div><span class="kicker" data-i18n="liveNow">LIVE NOW</span><h2 data-i18n="liveIntelligence">Live Intelligence</h2></div>
-            <button class="text-button pressable" data-action="open-matches" data-i18n="allMatches">Все матчи</button>
-          </div>
-          <div class="horizontal-cards">
-            <article class="live-match-card pressable" data-action="open-live-match">
-              <div class="live-top"><span class="badge badge-live"><span class="live-dot"></span>LIVE 67'</span><span>UCL</span></div>
-              <div class="live-score"><span>ARS</span><b>1–1</b><span>BAR</span></div>
-              <p data-i18n="liveSignal">Твоя гипотеза держится, но риск через левый фланг растёт.</p>
-              <div class="signal-bar"><i style="width:68%"></i></div>
-            </article>
-            <article class="live-match-card pressable" data-action="open-replay">
-              <div class="live-top"><span class="badge badge-success" data-i18n="replayReady">REPLAY READY</span><span>FT</span></div>
-              <div class="live-score"><span>INT</span><b>2–1</b><span>BAY</span></div>
-              <p data-i18n="replaySignal">Сильная логика, неверный уровень уверенности. Разбери решение.</p>
-              <div class="replay-score"><span>Decision Replay</span><b>82</b></div>
-            </article>
-          </div>
+        <section class="section">
+          <div class="section-head"><div><span class="eyebrow">SPORTS MEMORY V2</span><h2 data-i18n="memorySignals">Сигналы из твоей истории</h2></div><button class="text-button pressable" data-action="go-intelligence" data-i18n="openAll">Открыть всё</button></div>
+          <div class="memory-carousel" id="homeMemoryCards"></div>
         </section>
 
-        <section class="section reveal twin-section">
-          <div class="section-heading">
-            <div><span class="kicker">SPORTS TWIN</span><h2 data-i18n="yourTwin">Твоя модель мышления</h2></div>
-            <button class="round-link pressable" data-action="open-twin" aria-label="Sports Twin">↗</button>
-          </div>
-          <article class="twin-card premium-card pressable" data-action="open-twin">
-            <div class="twin-orb" aria-hidden="true"><span></span><i></i></div>
-            <div class="twin-copy">
-              <span class="badge badge-purple" data-i18n="patternDetected">PATTERN DETECTED</span>
-              <h3 data-i18n="twinHeadline">Ты переоцениваешь влияние сильного состава</h3>
-              <p data-i18n="twinText">В 4 из 6 последних решений состав повышал твою уверенность сильнее, чем подтверждали контекст и нагрузка.</p>
-              <div class="evidence-row"><span><b>6</b><small data-i18n="decisions">решений</small></span><span><b>−11%</b><small data-i18n="calibrationImpact">влияние на калибровку</small></span></div>
-            </div>
+        <section class="section">
+          <div class="section-head"><div><span class="eyebrow">DECISION REPLAY V2</span><h2 data-i18n="replayReady">Готов новый разбор</h2></div><span class="badge badge-green">READY</span></div>
+          <article class="replay-preview pressable" data-action="open-replay">
+            <div class="replay-score"><strong>82</strong><small>DECISION SCORE</small></div><div><h3>Inter 2–1 Bayern</h3><p>Сценарий был сильным. Уверенность и оценка стандартов — главные точки роста.</p><div class="skill-pills"><span>Tactical 91</span><span>Context 76</span><span>Calibration 69</span></div></div><span class="arrow">→</span>
           </article>
         </section>
 
-        <section class="section reveal">
-          <div class="section-heading">
-            <div><span class="kicker">FUTURE SELF</span><h2 data-i18n="futureSelf">Следующая версия тебя</h2></div>
-          </div>
-          <article class="future-card premium-card">
-            <div class="future-progress"><div><span data-i18n="nextLevel">До уровня Master Analyst</span><b>72%</b></div><div class="progress-track"><i></i></div></div>
-            <div class="future-mission">
-              <span class="mission-index">01</span>
-              <div><small data-i18n="personalMission">Персональная миссия</small><b data-i18n="missionText">В следующем Thesis укажи фактор, который способен изменить твоё мнение.</b></div>
-            </div>
-            <button class="ghost-button pressable" data-action="start-mission" data-i18n="startMission">Начать миссию</button>
-          </article>
+        <section class="section">
+          <div class="section-head"><div><span class="eyebrow">LEARNING LOOP</span><h2 data-i18n="nextLesson">Следующий персональный урок</h2></div><span class="time-chip">4 MIN</span></div>
+          <article class="lesson-card pressable" data-action="open-lesson"><div class="lesson-visual"><span>68%</span><i></i></div><div><h3>Контроль мяча ≠ контроль матча</h3><p>Научись отделять владение от реального территориального и событийного контроля.</p><small>Выбран из твоего паттерна Lineup Bias</small></div><span class="arrow">→</span></article>
         </section>
 
-        <section class="section reveal">
-          <div class="section-heading">
-            <div><span class="kicker">SPORTS MEMORY</span><h2 data-i18n="memoryMoment">Memory Moment</h2></div>
-            <button class="text-button pressable" data-action="open-memory" data-i18n="openTimeline">Вся история</button>
-          </div>
-          <article class="memory-card premium-card pressable" data-action="open-memory">
-            <div class="memory-date"><b>18</b><span>APR<br>2026</span></div>
-            <div class="memory-copy"><span class="badge badge-gold" data-i18n="breakthrough">BREAKTHROUGH</span><h3 data-i18n="memoryTitle">Ты впервые снизил уверенность после проверки риска</h3><p data-i18n="memoryText">Это решение стало началом роста твоего Context IQ.</p></div>
-            <span class="memory-arrow">→</span>
-          </article>
-        </section>
-
-        <section class="section reveal">
-          <div class="section-heading"><div><span class="kicker">GEO INTELLIGENCE</span><h2 data-i18n="aroundYou">Футбол вокруг тебя</h2></div></div>
-          <article class="geo-card premium-card pressable" data-action="open-geo">
-            <div class="geo-map" aria-hidden="true"><span class="geo-pulse"></span><i></i><i></i><i></i></div>
-            <div class="geo-copy"><span class="badge">ZHYTOMYR</span><h3 data-i18n="geoTitle">Локальный футбольный мир активен</h3><p data-i18n="geoText">3 матча, 2 сообщества и одна аналитическая встреча рядом на этой неделе.</p></div>
-          </article>
-        </section>
-
-        <section class="section reveal">
-          <div class="section-heading"><div><span class="kicker">COMMUNITY PULSE</span><h2 data-i18n="community">Интеллект друзей</h2></div><button class="text-button pressable" data-action="open-community" data-i18n="open">Открыть</button></div>
-          <div class="community-row">
-            <button class="friend-card pressable" data-action="open-friend" data-friend="Alex"><span class="friend-avatar">A</span><b>Alex</b><small>IQ 8 720</small><i class="trend-up">+38</i></button>
-            <button class="friend-card pressable" data-action="open-friend" data-friend="Marta"><span class="friend-avatar friend-b">M</span><b>Marta</b><small>IQ 8 190</small><i class="trend-up">+21</i></button>
-            <button class="friend-card pressable battle-card" data-action="start-battle"><span class="battle-icon">⚔</span><b data-i18n="thesisBattle">Thesis Battle</b><small data-i18n="challengeFriend">Вызвать друга</small></button>
-          </div>
-        </section>
-
-        <section class="section reveal">
-          <div class="section-heading"><div><span class="kicker">TODAY FOR YOU</span><h2 data-i18n="todayForYou">Твоя интеллектуальная лента</h2></div></div>
-          <div class="recommendation-list">
-            <button class="recommendation pressable" data-action="open-lesson"><span class="recommendation-icon">△</span><span><small data-i18n="microLesson">МИКРО-УРОК · 4 МИН</small><b data-i18n="lessonTitle">Как отличать контроль мяча от контроля матча</b></span><i>→</i></button>
-            <button class="recommendation pressable" data-action="open-scenario-lab"><span class="recommendation-icon">◇</span><span><small>SCENARIO LAB · 6 MIN</small><b data-i18n="scenarioLabTitle">Что делать команде после удаления на 62-й минуте</b></span><i>→</i></button>
-          </div>
-        </section>
-
-        <section class="section reveal last-section">
-          <div class="section-heading"><div><span class="kicker">WEEKLY WRAPPED</span><h2 data-i18n="weeklyReport">Твоя неделя в NOVIQ</h2></div><button class="round-link pressable" data-action="open-wrapped" aria-label="Weekly Wrapped">↗</button></div>
-          <article class="wrapped-card premium-card pressable" data-action="open-wrapped">
-            <div class="wrapped-rings" aria-hidden="true"><span></span><i></i><b></b></div>
-            <div class="wrapped-copy"><span class="badge badge-gold">WEEK 31</span><h3 data-i18n="wrappedHeadline">Ты стал точнее, но не осторожнее</h3><p data-i18n="wrappedText">Сценарии +9%. Калибровка уверенности −2%. Главный фокус следующей недели — управление риском.</p></div>
-            <div class="wrapped-stats"><span><b>7</b><small>Thesis</small></span><span><b>82</b><small>Best Replay</small></span><span><b>+64</b><small>Sports IQ</small></span></div>
-          </article>
-        </section>
+        <section class="section bottom-spacer"><div class="version-card"><span>NOVIQ 1.1</span><p>Adaptive Diagnostic · Thesis V2 · Replay V2 · Confidence Lab · Learning Loop</p></div></section>
       </div>
     </section>
 
-    <section class="page" data-page="matches" aria-label="Матчи">
-      <div class="page-scroll inner-page">
-        <div class="inner-header"><div><span class="kicker">MATCH CENTER</span><h1 data-i18n="matches">Матчи</h1></div><button class="icon-button pressable" data-action="toggle-match-filter" aria-label="Фильтры"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button></div>
-        <div class="filter-tabs" role="tablist">
-          <button class="filter-tab active pressable" data-filter="for-you" data-i18n="forYou">Для тебя</button>
-          <button class="filter-tab pressable" data-filter="live">Live</button>
-          <button class="filter-tab pressable" data-filter="upcoming" data-i18n="upcoming">Скоро</button>
-          <button class="filter-tab pressable" data-filter="replay">Replay</button>
-        </div>
-        <div class="match-list" id="matchList"></div>
-      </div>
-    </section>
+    <section class="page" data-page="matches"><div class="page-scroll"><div class="page-heading"><span class="eyebrow">MATCH CENTER</span><h1 data-i18n="matches">Матчи</h1><p data-i18n="matchesSubtitle">Выбирай матчи не по шуму, а по аналитической ценности.</p></div><div class="filter-row" id="matchFilters"><button class="filter-chip active" data-filter="for-you">For you</button><button class="filter-chip" data-filter="upcoming">Upcoming</button><button class="filter-chip" data-filter="live">Live</button><button class="filter-chip" data-filter="replay">Replay</button></div><div class="match-list" id="matchList"></div><div class="bottom-spacer"></div></div></section>
 
-    <section class="page" data-page="insights" aria-label="Интеллект">
-      <div class="page-scroll inner-page">
-        <div class="inner-header"><div><span class="kicker">MY INTELLIGENCE</span><h1 data-i18n="intelligence">Интеллект</h1></div><button class="icon-button pressable" data-action="share-profile" aria-label="Поделиться"><svg viewBox="0 0 24 24"><path d="M12 16V3m0 0 4 4m-4-4L8 7M5 12v7h14v-7"/></svg></button></div>
-        <article class="intelligence-overview premium-card">
-          <div class="overview-score"><small>SPORTS IQ</small><strong>8 542</strong><span>ELITE · TOP 9%</span></div>
-          <div class="radar" aria-label="Профиль навыков"><svg viewBox="0 0 200 180"><polygon class="radar-grid" points="100,12 184,74 152,168 48,168 16,74"></polygon><polygon class="radar-grid inner" points="100,45 151,83 132,140 68,140 49,83"></polygon><polygon class="radar-data" points="100,24 168,78 139,151 59,145 38,77"></polygon><circle cx="100" cy="24" r="4"></circle><circle cx="168" cy="78" r="4"></circle><circle cx="139" cy="151" r="4"></circle><circle cx="59" cy="145" r="4"></circle><circle cx="38" cy="77" r="4"></circle></svg><span class="radar-label tactical">Tactical</span><span class="radar-label context">Context</span><span class="radar-label data">Data</span><span class="radar-label decision">Decision</span><span class="radar-label learning">Learning</span></div>
-        </article>
-        <div class="section-heading compact"><div><span class="kicker">ACTIVE PATTERNS</span><h2 data-i18n="activePatterns">Активные паттерны</h2></div></div>
-        <div class="pattern-list" id="patternList"></div>
-        <div class="section-heading compact"><div><span class="kicker">SPORTS MEMORY</span><h2 data-i18n="recentDecisions">Последние решения</h2></div></div>
-        <div class="decision-list" id="decisionList"></div>
-      </div>
-    </section>
+    <section class="page" data-page="intelligence"><div class="page-scroll"><div class="page-heading"><span class="eyebrow">YOUR INTELLIGENCE</span><h1 data-i18n="intelligence">Интеллект</h1><p data-i18n="intelligenceSubtitle">Навыки, калибровка, паттерны и доказательства прогресса.</p></div><section class="dashboard-grid" id="skillDashboard"></section><section class="panel"><div class="section-head"><div><span class="eyebrow">30 DAY TREND</span><h2 data-i18n="progressDashboard">Progress Dashboard</h2></div><span class="badge badge-purple">+124 IQ</span></div><div class="trend-chart" id="trendChart"></div><div class="trend-legend"><span>Sports IQ</span><span>Calibration</span><span>Completed loops</span></div></section><section class="panel"><div class="section-head"><div><span class="eyebrow">SPORTS MEMORY V2</span><h2 data-i18n="activePatterns">Активные паттерны</h2></div><button class="text-button" data-action="memory-filters">Фильтры</button></div><div class="pattern-list" id="patternList"></div></section><section class="panel"><div class="section-head"><div><span class="eyebrow">DECISION HISTORY</span><h2 data-i18n="recentDecisions">Последние решения</h2></div></div><div class="decision-list" id="decisionList"></div></section><div class="bottom-spacer"></div></div></section>
 
-    <section class="page" data-page="profile" aria-label="Профиль">
-      <div class="page-scroll inner-page">
-        <div class="profile-hero">
-          <div class="profile-big-avatar">Б</div>
-          <span class="badge badge-gold">FOUNDER · ELITE</span>
-          <h1>Богдан Тищенко</h1>
-          <p data-i18n="profileTagline">Строю доказанную футбольную экспертизу, а не коллекцию случайных прогнозов.</p>
-          <div class="profile-stats"><span><b>8 542</b><small>Sports IQ</small></span><span><b>37</b><small>Thesis</small></span><span><b>72%</b><small>Calibration</small></span></div>
-        </div>
-        <div class="settings-group">
-          <h2 data-i18n="personalization">Персонализация</h2>
-          <button class="setting-row pressable" data-action="open-language"><span class="setting-icon">文</span><span><b data-i18n="language">Язык</b><small id="currentLanguage">Русский</small></span><i>›</i></button>
-          <button class="setting-row pressable" data-action="toggle-theme"><span class="setting-icon">◐</span><span><b data-i18n="appearance">Оформление</b><small id="currentTheme">Dark Elite</small></span><i>›</i></button>
-          <button class="setting-row pressable" data-action="open-notification-settings"><span class="setting-icon">◉</span><span><b data-i18n="notifications">Уведомления</b><small data-i18n="smartOnly">Только значимые</small></span><i>›</i></button>
-        </div>
-        <div class="settings-group">
-          <h2 data-i18n="accountData">Аккаунт и данные</h2>
-          <button class="setting-row pressable" data-action="export-data"><span class="setting-icon">⇩</span><span><b data-i18n="exportData">Экспорт данных</b><small data-i18n="exportText">Thesis, Replay и Sports Memory</small></span><i>›</i></button>
-          <button class="setting-row pressable" data-action="reset-demo"><span class="setting-icon">↺</span><span><b data-i18n="resetDemo">Сбросить демо</b><small data-i18n="resetText">Удалить локальный прогресс</small></span><i>›</i></button>
-        </div>
-        <div class="version-card"><span>NOVIQ</span><b>Version 1.0</b><small>Unique MVP · Local demo data</small></div>
-      </div>
-    </section>
+    <section class="page" data-page="profile"><div class="page-scroll"><div class="profile-hero"><div class="profile-avatar">BT</div><div><span class="eyebrow">FOUNDER PROFILE</span><h1>Богдан Тищенко</h1><p data-i18n="profileTagline">Строю доказанную футбольную экспертизу, а не коллекцию случайных прогнозов.</p></div></div><div class="profile-stats"><div><strong id="profileIQ">8 542</strong><small>Sports IQ</small></div><div><strong id="profileLoops">12</strong><small>Loops</small></div><div><strong id="profileCalibration">72%</strong><small>Calibration</small></div></div><section class="settings-group"><h2 data-i18n="personalization">Персонализация</h2><button class="setting-row pressable" data-action="change-language"><span class="setting-icon">文</span><span><b data-i18n="language">Язык</b><small id="currentLanguage">Русский</small></span><i>›</i></button><button class="setting-row pressable" data-action="toggle-theme"><span class="setting-icon">◐</span><span><b data-i18n="appearance">Оформление</b><small id="currentTheme">Dark Elite</small></span><i>›</i></button><button class="setting-row pressable" data-action="open-notifications"><span class="setting-icon">◌</span><span><b data-i18n="notifications">Уведомления</b><small data-i18n="smartOnly">Только значимые</small></span><i>›</i></button></section><section class="settings-group"><h2 data-i18n="accountData">Аккаунт и данные</h2><button class="setting-row pressable" data-action="export-data"><span class="setting-icon">⇩</span><span><b data-i18n="exportData">Экспорт данных</b><small data-i18n="exportText">Thesis, Replay и Sports Memory</small></span><i>›</i></button><button class="setting-row pressable danger" data-action="reset-demo"><span class="setting-icon">↺</span><span><b data-i18n="resetDemo">Сбросить демо</b><small data-i18n="resetText">Удалить локальный прогресс</small></span><i>›</i></button></section><section class="panel"><div class="section-head"><div><span class="eyebrow">DATA TRANSPARENCY</span><h2>Почему меняется Sports IQ</h2></div></div><p class="body-copy">NOVIQ учитывает качество аргументов, сложность матча, полноту данных, риск, уверенность и способность учиться. Простая активность почти не влияет на рейтинг.</p><button class="secondary-button pressable" data-action="open-iq-method">Открыть методологию</button></section><div class="bottom-spacer"></div></div></section>
 
-    <nav class="bottom-nav" aria-label="Основная навигация">
-      <button class="nav-item active pressable" data-nav="home"><svg viewBox="0 0 24 24"><path d="m4 10 8-7 8 7v10h-6v-6h-4v6H4Z"/></svg><span data-i18n="home">Главная</span></button>
-      <button class="nav-item pressable" data-nav="matches"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></svg><span data-i18n="matches">Матчи</span></button>
-      <button class="nav-core pressable" data-action="open-ai-core" aria-label="AI Core"><span class="core-orb"><i></i><b>✦</b></span><small>AI CORE</small></button>
-      <button class="nav-item pressable" data-nav="insights"><svg viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg><span data-i18n="insights">Интеллект</span></button>
-      <button class="nav-item pressable" data-nav="profile"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0"/></svg><span data-i18n="profile">Профиль</span></button>
-    </nav>
+    <nav class="bottom-nav" aria-label="Main navigation"><button class="nav-item active pressable" data-nav="home" data-action="navigate"><span>⌂</span><small data-i18n="home">Главная</small></button><button class="nav-item pressable" data-nav="matches" data-action="navigate"><span>▦</span><small data-i18n="matches">Матчи</small></button><button class="nav-core pressable" data-action="open-ai-core" aria-label="AI Core"><span>✦</span></button><button class="nav-item pressable" data-nav="intelligence" data-action="navigate"><span>◇</span><small data-i18n="intelligence">Интеллект</small></button><button class="nav-item pressable" data-nav="profile" data-action="navigate"><span>●</span><small data-i18n="profile">Профиль</small></button></nav>
   </main>
 
-  <div class="modal-layer" id="modalLayer" aria-hidden="true">
-    <div class="modal-backdrop" data-action="close-modal"></div>
-    <section class="modal-sheet" id="modalSheet" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-handle" aria-hidden="true"></div>
-      <header class="modal-header">
-        <div><span class="kicker" id="modalKicker">NOVIQ</span><h2 id="modalTitle">Title</h2></div>
-        <button class="icon-button pressable" data-action="close-modal" aria-label="Закрыть">×</button>
-      </header>
-      <div class="modal-content" id="modalContent"></div>
-    </section>
-  </div>
-
+  <div class="modal-layer" id="modalLayer" aria-hidden="true"><button class="modal-backdrop" data-action="close-modal" aria-label="Close"></button><section class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-grabber"></div><div class="modal-header"><div><span class="eyebrow" id="modalKicker">NOVIQ</span><h2 id="modalTitle">Title</h2></div><button class="icon-button pressable" data-action="close-modal" aria-label="Close">×</button></div><div class="modal-content" id="modalContent"></div></section></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <div class="install-banner" id="installBanner" hidden>
-    <div><b data-i18n="installNoviq">Установить NOVIQ</b><small data-i18n="installText">Открывай как отдельное приложение</small></div>
-    <button class="primary-button pressable" data-action="install-app" data-i18n="install">Установить</button>
-    <button class="icon-button pressable" data-action="dismiss-install" aria-label="Закрыть">×</button>
-  </div>
-
-  <script src="app.js" defer></script>
+  <div class="install-banner" id="installBanner" hidden><div><b data-i18n="installNoviq">Установить NOVIQ</b><small data-i18n="installCopy">Открывай как отдельное приложение</small></div><button class="primary-button pressable" data-action="install-app" data-i18n="install">Установить</button><button class="icon-button pressable" data-action="dismiss-install">×</button></div>
+  <script src="app.js"></script>
 </body>
 </html>
