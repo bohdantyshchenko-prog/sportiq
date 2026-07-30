@@ -1,43 +1,39 @@
-# NOVIQ 1.0 — Unique MVP
+# NOVIQ 1.1 — First Intelligence Loop
 
-NOVIQ is a mobile-first Sports Intelligence product built around one defensible loop:
+NOVIQ is a mobile-first Sports Intelligence product that helps a fan build, review, remember and improve football decisions.
 
-**AI Briefing → Match Thesis → AI Review → Decision Replay → Sports IQ → Sports Memory**
+## Core loop
 
-## Live product scope
+**Adaptive Diagnostic → AI Briefing → Match Thesis V2 → AI Review V2 → Decision Replay V2 → Learning Loop → Sports Memory V2**
 
-Version 1.0 is an interactive front-end product prototype, not a static mockup. It includes:
+## What is interactive in 1.1
 
-- Dark Elite and Light Elite themes
-- RU / UA / EN localization
-- Sports IQ diagnostic
-- Match Center and Live Intelligence states
-- Match Thesis form with risk, confidence and decision lock
-- AI Thesis Review
-- Decision Replay and Sports IQ updates
-- Sports Memory patterns and decision timeline
-- Sports Twin, Future Self, Geo Intelligence, Community Pulse and Weekly Wrapped demos
-- Local persistence through `localStorage`
-- JSON data export
-- PWA manifest and offline cache
-- Responsive mobile layout, safe areas, reduced-motion support and accessible controls
+- 10-step adaptive Sports IQ diagnostic with confidence input
+- five skill scores and evidence-confidence levels
+- Match Thesis V2 with Quick/Expert modes, sources, versions, risk, alternative scenario and falsification trigger
+- AI Thesis Review V2 with specificity, causality, evidence, risk and bias checks
+- immutable Decision Lock with timestamp
+- Decision Replay V2 with timeline, score breakdown and required reflection
+- Confidence Lab and calibration ranges
+- personal missions, lessons and control questions
+- Sports Memory V2 with evidence-backed patterns
+- Match Center filters, AI Core demo, notifications, RU/UA/EN and Dark/Light Elite
+- local persistence, JSON export, PWA install and offline shell
 
-## Important limitations
+## Important product status
 
-This build uses demo data and local simulated AI. Real sports feeds, server-side AI, authentication, cloud sync, push notifications and verified social reputation are not connected yet.
+This is a functional front-end prototype. Sports data, AI answers, live events, friends and cloud accounts are demo/local implementations. Real data providers, server-side AI, authentication and sync are not yet connected.
 
 ## Run locally
 
-Open `index.html`, or serve the repository with any static server.
+Serve the folder with any static server, for example:
 
 ```bash
-python -m http.server 8080
+python3 -m http.server 8080
 ```
 
-## Deploy
+Then open `http://localhost:8080`.
 
-GitHub Pages deploys automatically from `main` via `.github/workflows/pages.yml`.
+## Public build
 
-## Product rule
-
-NOVIQ does not promise guaranteed match predictions. It measures and develops the quality of sports reasoning.
+GitHub Pages deploys automatically from `main` using `.github/workflows/pages.yml`.
