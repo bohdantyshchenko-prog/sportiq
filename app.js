@@ -1,582 +1,305 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'noviq-v1-state';
+  const STORAGE_KEY = 'noviq-v1.1-state';
+  const LEGACY_KEY = 'noviq-v1-state';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const clone = (v) => JSON.parse(JSON.stringify(v));
+
   const defaultState = {
-    language: 'ru',
-    theme: 'dark',
-    sportsIQ: 8542,
-    diagnosticCompleted: false,
+    version: '1.1', language: 'ru', theme: 'dark', sportsIQ: 8542,
+    skills: { tactical: 0.89, context: 0.74, data: 0.78, decision: 0.81, learning: 0.86 },
+    skillTrust: { tactical: 82, context: 69, data: 72, decision: 77, learning: 80 },
+    diagnostic: { completed: false, level: 'adaptive', answers: [], lastAt: null },
     thesis: null,
-    decisions: [
-      { match: 'Inter — Bayern', score: 82, date: '29 Jul', lesson: 'Сценарий был сильным, уверенность завышена.' },
-      { match: 'PSG — Liverpool', score: 76, date: '26 Jul', lesson: 'Хорошо учтён контекст, пропущен риск стандартов.' },
-      { match: 'Arsenal — Barcelona', score: 88, date: '22 Jul', lesson: 'Лучший тактический разбор месяца.' }
+    calibration: {
+      score: 72,
+      bins: [
+        { label: '50–59%', predicted: 55, actual: 58 },
+        { label: '60–69%', predicted: 65, actual: 67 },
+        { label: '70–79%', predicted: 75, actual: 69 },
+        { label: '80–89%', predicted: 85, actual: 68 }
+      ],
+      history: [65, 66, 68, 67, 70, 71, 72]
+    },
+    mission: { id: 'alternative', title: 'Назови альтернативный сценарий', copy: 'Добавь его в следующий Thesis, чтобы усилить Decision IQ.', progress: 0, target: 1, completed: false },
+    patterns: [
+      { id: 'lineup-bias', icon: '△', title: 'Lineup Bias', summary: 'Сильный состав повышает твою уверенность сильнее, чем подтверждают контекст и нагрузка.', severity: 'medium', evidence: ['MCI—RMA · +12%', 'PSG—LIV · +9%', 'INT—BAY · +11%'], skill: 'Decision IQ' },
+      { id: 'transition-reader', icon: '◎', title: 'Transition Reader', summary: 'Ты стабильно замечаешь риск быстрых переходов раньше среднего.', severity: 'strength', evidence: ['ARS—BAR · confirmed', 'INT—BAY · confirmed', 'POL—DKY · confirmed'], skill: 'Tactical IQ' },
+      { id: 'playoff-uncertainty', icon: '◇', title: 'Playoff Uncertainty', summary: 'В плей-офф твоя калибровка хуже на 8 пунктов.', severity: 'medium', evidence: ['9 матчей', '81% → 66% actual', '3 повторения'], skill: 'Context IQ' }
     ],
-    notifications: { briefings: true, lineups: true, replay: true, weekly: true },
-    installedPromptSeen: false
+    decisions: [
+      { id: 'int-bay', match: 'Inter — Bayern', score: 82, date: '29 Jul', lesson: 'Сценарий был сильным, уверенность завышена.', completed: false },
+      { id: 'psg-liv', match: 'PSG — Liverpool', score: 76, date: '26 Jul', lesson: 'Хорошо учтён контекст, пропущен риск стандартов.', completed: true },
+      { id: 'ars-bar', match: 'Arsenal — Barcelona', score: 88, date: '22 Jul', lesson: 'Лучший тактический разбор месяца.', completed: true }
+    ],
+    lessonsCompleted: [], completedLoops: 12,
+    notifications: { briefings: true, lineups: true, replay: true, weekly: true, patterns: true },
+    installDismissed: false
   };
 
   const translations = {
-    ru: {
-      hello: 'Привет, Богдан', eliteProfile: 'Elite Intelligence', personalIntelligence: 'PERSONAL INTELLIGENCE', recheck: 'Перепроверить', sportsIQ: 'SPORTS IQ', iqCaption: 'Выше 91% активных аналитиков', worldCup: 'World Cup Command Center', tournamentMode: 'TOURNAMENT MODE', worldCupTitle: 'Твой интеллект на главном турнире', worldCupText: 'Персональные сценарии, скрытые риски и турнирная память без перегрузки новостями.', matchesAnalyzed: 'матчей разобрано', scenarioAccuracy: 'точность сценариев', matchOfDay: 'MATCH OF THE DAY', aiBriefing: 'AI Briefing', refresh: 'Обновить', today: 'Сегодня', mainScenario: 'Главный сценарий', scenarioText: 'Контроль City против переходов Madrid', hiddenRisk: 'Скрытый риск', riskText: 'Пространство после потери в центре', fullBriefing: 'Полный briefing', createThesis: 'Создать Thesis', liveNow: 'LIVE NOW', liveIntelligence: 'Live Intelligence', allMatches: 'Все матчи', liveSignal: 'Твоя гипотеза держится, но риск через левый фланг растёт.', replayReady: 'REPLAY READY', replaySignal: 'Сильная логика, неверный уровень уверенности. Разбери решение.', yourTwin: 'Твоя модель мышления', patternDetected: 'PATTERN DETECTED', twinHeadline: 'Ты переоцениваешь влияние сильного состава', twinText: 'В 4 из 6 последних решений состав повышал твою уверенность сильнее, чем подтверждали контекст и нагрузка.', decisions: 'решений', calibrationImpact: 'влияние на калибровку', futureSelf: 'Следующая версия тебя', nextLevel: 'До уровня Master Analyst', personalMission: 'Персональная миссия', missionText: 'В следующем Thesis укажи фактор, который способен изменить твоё мнение.', startMission: 'Начать миссию', memoryMoment: 'Memory Moment', openTimeline: 'Вся история', breakthrough: 'BREAKTHROUGH', memoryTitle: 'Ты впервые снизил уверенность после проверки риска', memoryText: 'Это решение стало началом роста твоего Context IQ.', aroundYou: 'Футбол вокруг тебя', geoTitle: 'Локальный футбольный мир активен', geoText: '3 матча, 2 сообщества и одна аналитическая встреча рядом на этой неделе.', community: 'Интеллект друзей', open: 'Открыть', thesisBattle: 'Thesis Battle', challengeFriend: 'Вызвать друга', todayForYou: 'Твоя интеллектуальная лента', microLesson: 'МИКРО-УРОК · 4 МИН', lessonTitle: 'Как отличать контроль мяча от контроля матча', scenarioLabTitle: 'Что делать команде после удаления на 62-й минуте', weeklyReport: 'Твоя неделя в NOVIQ', wrappedHeadline: 'Ты стал точнее, но не осторожнее', wrappedText: 'Сценарии +9%. Калибровка уверенности −2%. Главный фокус следующей недели — управление риском.', home: 'Главная', matches: 'Матчи', insights: 'Интеллект', profile: 'Профиль', forYou: 'Для тебя', upcoming: 'Скоро', intelligence: 'Интеллект', activePatterns: 'Активные паттерны', recentDecisions: 'Последние решения', profileTagline: 'Строю доказанную футбольную экспертизу, а не коллекцию случайных прогнозов.', personalization: 'Персонализация', language: 'Язык', appearance: 'Оформление', notifications: 'Уведомления', smartOnly: 'Только значимые', accountData: 'Аккаунт и данные', exportData: 'Экспорт данных', exportText: 'Thesis, Replay и Sports Memory', resetDemo: 'Сбросить демо', resetText: 'Удалить локальный прогресс', installNoviq: 'Установить NOVIQ', installText: 'Открывай как отдельное приложение', install: 'Установить'
-    },
-    ua: {
-      hello: 'Привіт, Богдане', eliteProfile: 'Elite Intelligence', personalIntelligence: 'PERSONAL INTELLIGENCE', recheck: 'Перевірити', sportsIQ: 'SPORTS IQ', iqCaption: 'Вище 91% активних аналітиків', worldCup: 'World Cup Command Center', tournamentMode: 'TOURNAMENT MODE', worldCupTitle: 'Твій інтелект на головному турнірі', worldCupText: 'Персональні сценарії, приховані ризики й турнірна пам’ять без перевантаження новинами.', matchesAnalyzed: 'матчів розібрано', scenarioAccuracy: 'точність сценаріїв', matchOfDay: 'MATCH OF THE DAY', aiBriefing: 'AI Briefing', refresh: 'Оновити', today: 'Сьогодні', mainScenario: 'Головний сценарій', scenarioText: 'Контроль City проти переходів Madrid', hiddenRisk: 'Прихований ризик', riskText: 'Простір після втрати в центрі', fullBriefing: 'Повний briefing', createThesis: 'Створити Thesis', liveNow: 'LIVE NOW', liveIntelligence: 'Live Intelligence', allMatches: 'Усі матчі', liveSignal: 'Твоя гіпотеза тримається, але ризик через лівий фланг зростає.', replayReady: 'REPLAY READY', replaySignal: 'Сильна логіка, хибний рівень упевненості. Розбери рішення.', yourTwin: 'Твоя модель мислення', patternDetected: 'PATTERN DETECTED', twinHeadline: 'Ти переоцінюєш вплив сильного складу', twinText: 'У 4 із 6 останніх рішень склад підвищував твою впевненість сильніше, ніж підтверджували контекст і навантаження.', decisions: 'рішень', calibrationImpact: 'вплив на калібрування', futureSelf: 'Наступна версія тебе', nextLevel: 'До рівня Master Analyst', personalMission: 'Персональна місія', missionText: 'У наступному Thesis вкажи фактор, здатний змінити твою думку.', startMission: 'Почати місію', memoryMoment: 'Memory Moment', openTimeline: 'Уся історія', breakthrough: 'BREAKTHROUGH', memoryTitle: 'Ти вперше знизив упевненість після перевірки ризику', memoryText: 'Це рішення стало початком зростання твого Context IQ.', aroundYou: 'Футбол навколо тебе', geoTitle: 'Локальний футбольний світ активний', geoText: '3 матчі, 2 спільноти й одна аналітична зустріч поруч цього тижня.', community: 'Інтелект друзів', open: 'Відкрити', thesisBattle: 'Thesis Battle', challengeFriend: 'Кинути виклик другу', todayForYou: 'Твоя інтелектуальна стрічка', microLesson: 'МІКРОУРОК · 4 ХВ', lessonTitle: 'Як відрізняти контроль м’яча від контролю матчу', scenarioLabTitle: 'Що робити команді після вилучення на 62-й хвилині', weeklyReport: 'Твій тиждень у NOVIQ', wrappedHeadline: 'Ти став точнішим, але не обережнішим', wrappedText: 'Сценарії +9%. Калібрування впевненості −2%. Головний фокус наступного тижня — керування ризиком.', home: 'Головна', matches: 'Матчі', insights: 'Інтелект', profile: 'Профіль', forYou: 'Для тебе', upcoming: 'Незабаром', intelligence: 'Інтелект', activePatterns: 'Активні патерни', recentDecisions: 'Останні рішення', profileTagline: 'Будую доведену футбольну експертизу, а не колекцію випадкових прогнозів.', personalization: 'Персоналізація', language: 'Мова', appearance: 'Оформлення', notifications: 'Сповіщення', smartOnly: 'Лише значущі', accountData: 'Акаунт і дані', exportData: 'Експорт даних', exportText: 'Thesis, Replay і Sports Memory', resetDemo: 'Скинути демо', resetText: 'Видалити локальний прогрес', installNoviq: 'Встановити NOVIQ', installText: 'Відкривай як окремий застосунок', install: 'Встановити'
-    },
-    en: {
-      hello: 'Hello, Bohdan', eliteProfile: 'Elite Intelligence', personalIntelligence: 'PERSONAL INTELLIGENCE', recheck: 'Reassess', sportsIQ: 'SPORTS IQ', iqCaption: 'Above 91% of active analysts', worldCup: 'World Cup Command Center', tournamentMode: 'TOURNAMENT MODE', worldCupTitle: 'Your intelligence at the biggest tournament', worldCupText: 'Personal scenarios, hidden risks and tournament memory without a noisy news feed.', matchesAnalyzed: 'matches analyzed', scenarioAccuracy: 'scenario accuracy', matchOfDay: 'MATCH OF THE DAY', aiBriefing: 'AI Briefing', refresh: 'Refresh', today: 'Today', mainScenario: 'Main scenario', scenarioText: 'City control versus Madrid transitions', hiddenRisk: 'Hidden risk', riskText: 'Space after central turnovers', fullBriefing: 'Full briefing', createThesis: 'Create Thesis', liveNow: 'LIVE NOW', liveIntelligence: 'Live Intelligence', allMatches: 'All matches', liveSignal: 'Your thesis still holds, but the left-side risk is rising.', replayReady: 'REPLAY READY', replaySignal: 'Strong logic, weak confidence calibration. Review the decision.', yourTwin: 'Your thinking model', patternDetected: 'PATTERN DETECTED', twinHeadline: 'You overvalue a strong starting lineup', twinText: 'In 4 of your last 6 decisions, lineups increased confidence more than context and fatigue justified.', decisions: 'decisions', calibrationImpact: 'calibration impact', futureSelf: 'Your next version', nextLevel: 'Progress to Master Analyst', personalMission: 'Personal mission', missionText: 'In your next Thesis, state what evidence could change your mind.', startMission: 'Start mission', memoryMoment: 'Memory Moment', openTimeline: 'Full timeline', breakthrough: 'BREAKTHROUGH', memoryTitle: 'You first lowered confidence after checking risk', memoryText: 'That decision started the rise of your Context IQ.', aroundYou: 'Football around you', geoTitle: 'Your local football world is active', geoText: '3 matches, 2 communities and one analysis meetup nearby this week.', community: 'Friends intelligence', open: 'Open', thesisBattle: 'Thesis Battle', challengeFriend: 'Challenge a friend', todayForYou: 'Your intelligence feed', microLesson: 'MICRO LESSON · 4 MIN', lessonTitle: 'Possession control versus match control', scenarioLabTitle: 'How to respond to a red card in minute 62', weeklyReport: 'Your week in NOVIQ', wrappedHeadline: 'You became more accurate, not more cautious', wrappedText: 'Scenarios +9%. Confidence calibration −2%. Next focus: risk management.', home: 'Home', matches: 'Matches', insights: 'Intelligence', profile: 'Profile', forYou: 'For you', upcoming: 'Upcoming', intelligence: 'Intelligence', activePatterns: 'Active patterns', recentDecisions: 'Recent decisions', profileTagline: 'Building proven football expertise, not a collection of lucky predictions.', personalization: 'Personalization', language: 'Language', appearance: 'Appearance', notifications: 'Notifications', smartOnly: 'Meaningful only', accountData: 'Account and data', exportData: 'Export data', exportText: 'Thesis, Replay and Sports Memory', resetDemo: 'Reset demo', resetText: 'Delete local progress', installNoviq: 'Install NOVIQ', installText: 'Open it like a standalone app', install: 'Install'
-    }
+    ru: { personalIntelligence:'PERSONAL INTELLIGENCE',adaptiveActive:'Adaptive model active',hello:'Привет, Богдан',heroSubtitle:'Твоя модель футбольного мышления обновляется после каждого решения.',reassess:'Диагностика',currentLoop:'Твой текущий цикл',howItWorks:'Как работает',calibrationTitle:'Точность твоей уверенности',calibrationCopy:'Ты точен в диапазоне 60–70%, но переуверен выше 80%.',memorySignals:'Сигналы из твоей истории',openAll:'Открыть всё',replayReady:'Готов новый разбор',nextLesson:'Следующий персональный урок',matches:'Матчи',matchesSubtitle:'Выбирай матчи не по шуму, а по аналитической ценности.',intelligence:'Интеллект',intelligenceSubtitle:'Навыки, калибровка, паттерны и доказательства прогресса.',progressDashboard:'Progress Dashboard',activePatterns:'Активные паттерны',recentDecisions:'Последние решения',profile:'Профиль',profileTagline:'Строю доказанную футбольную экспертизу, а не коллекцию случайных прогнозов.',personalization:'Персонализация',language:'Язык',appearance:'Оформление',notifications:'Уведомления',smartOnly:'Только значимые',accountData:'Аккаунт и данные',exportData:'Экспорт данных',exportText:'Thesis, Replay и Sports Memory',resetDemo:'Сбросить демо',resetText:'Удалить локальный прогресс',home:'Главная',installNoviq:'Установить NOVIQ',installCopy:'Открывай как отдельное приложение',install:'Установить'},
+    ua: { personalIntelligence:'PERSONAL INTELLIGENCE',adaptiveActive:'Адаптивна модель активна',hello:'Привіт, Богдане',heroSubtitle:'Твоя модель футбольного мислення оновлюється після кожного рішення.',reassess:'Діагностика',currentLoop:'Твій поточний цикл',howItWorks:'Як працює',calibrationTitle:'Точність твоєї впевненості',calibrationCopy:'Ти точний у діапазоні 60–70%, але надто впевнений вище 80%.',memorySignals:'Сигнали з твоєї історії',openAll:'Відкрити все',replayReady:'Готовий новий розбір',nextLesson:'Наступний персональний урок',matches:'Матчі',matchesSubtitle:'Обирай матчі не за шумом, а за аналітичною цінністю.',intelligence:'Інтелект',intelligenceSubtitle:'Навички, калібрування, патерни й докази прогресу.',progressDashboard:'Панель прогресу',activePatterns:'Активні патерни',recentDecisions:'Останні рішення',profile:'Профіль',profileTagline:'Будую доведену футбольну експертизу, а не колекцію випадкових прогнозів.',personalization:'Персоналізація',language:'Мова',appearance:'Оформлення',notifications:'Сповіщення',smartOnly:'Лише важливі',accountData:'Акаунт і дані',exportData:'Експорт даних',exportText:'Thesis, Replay і Sports Memory',resetDemo:'Скинути демо',resetText:'Видалити локальний прогрес',home:'Головна',installNoviq:'Встановити NOVIQ',installCopy:'Відкривай як окремий застосунок',install:'Встановити'},
+    en: { personalIntelligence:'PERSONAL INTELLIGENCE',adaptiveActive:'Adaptive model active',hello:'Hello, Bohdan',heroSubtitle:'Your football thinking model updates after every decision.',reassess:'Assessment',currentLoop:'Your current loop',howItWorks:'How it works',calibrationTitle:'Your confidence accuracy',calibrationCopy:'You are calibrated at 60–70%, but overconfident above 80%.',memorySignals:'Signals from your history',openAll:'Open all',replayReady:'New review ready',nextLesson:'Your next personal lesson',matches:'Matches',matchesSubtitle:'Choose matches by analytical value, not noise.',intelligence:'Intelligence',intelligenceSubtitle:'Skills, calibration, patterns and evidence of progress.',progressDashboard:'Progress Dashboard',activePatterns:'Active patterns',recentDecisions:'Recent decisions',profile:'Profile',profileTagline:'Building proven football expertise, not a collection of lucky predictions.',personalization:'Personalization',language:'Language',appearance:'Appearance',notifications:'Notifications',smartOnly:'Meaningful only',accountData:'Account and data',exportData:'Export data',exportText:'Thesis, Replay and Sports Memory',resetDemo:'Reset demo',resetText:'Delete local progress',home:'Home',installNoviq:'Install NOVIQ',installCopy:'Open it like a standalone app',install:'Install'}
   };
 
   const matches = [
-    { id: 'mci-rma', group: 'for-you upcoming', tournament: 'Champions League', time: '21:45', home: 'Manchester City', away: 'Real Madrid', homeCode: 'MCI', awayCode: 'RMA', intelligence: 94, status: 'Create Thesis' },
-    { id: 'ars-bar', group: 'for-you live', tournament: 'Champions League', time: "67'", home: 'Arsenal', away: 'Barcelona', homeCode: 'ARS', awayCode: 'BAR', intelligence: 88, status: 'Follow Live', score: '1–1' },
-    { id: 'int-bay', group: 'for-you replay', tournament: 'Champions League', time: 'FT', home: 'Inter', away: 'Bayern', homeCode: 'INT', awayCode: 'BAY', intelligence: 91, status: 'Decision Replay', score: '2–1' },
-    { id: 'psg-liv', group: 'upcoming', tournament: 'Club World Cup', time: '19:00', home: 'PSG', away: 'Liverpool', homeCode: 'PSG', awayCode: 'LIV', intelligence: 86, status: 'Open Briefing' },
-    { id: 'pol-dyn', group: 'for-you upcoming', tournament: 'Ukraine', time: '17:00', home: 'Polissya', away: 'Dynamo Kyiv', homeCode: 'POL', awayCode: 'DKY', intelligence: 83, status: 'Create Thesis' }
+    { id:'mci-rma', group:'for-you upcoming', tournament:'Champions League', time:'21:45', home:'Manchester City', away:'Real Madrid', hc:'MCI', ac:'RMA', intelligence:94, status:'Create Thesis' },
+    { id:'ars-bar', group:'for-you live', tournament:'Champions League', time:"67'", score:'1–1', home:'Arsenal', away:'Barcelona', hc:'ARS', ac:'BAR', intelligence:88, status:'Follow Live' },
+    { id:'int-bay', group:'for-you replay', tournament:'Champions League', time:'FT', score:'2–1', home:'Inter', away:'Bayern', hc:'INT', ac:'BAY', intelligence:91, status:'Decision Replay' },
+    { id:'psg-liv', group:'upcoming', tournament:'Club World Cup', time:'19:00', home:'PSG', away:'Liverpool', hc:'PSG', ac:'LIV', intelligence:86, status:'Open Briefing' },
+    { id:'pol-dyn', group:'for-you upcoming', tournament:'Ukraine', time:'17:00', home:'Polissya', away:'Dynamo Kyiv', hc:'POL', ac:'DKY', intelligence:83, status:'Create Thesis' }
   ];
 
-  const patterns = [
-    { icon: '△', title: 'Lineup bias', text: 'Сильный состав повышает твою уверенность в среднем на 11% сильнее нормы.', evidence: '6 матчей' },
-    { icon: '◎', title: 'Transition reader', text: 'Ты стабильно замечаешь риск быстрых переходов раньше среднего.', evidence: '82% signal' },
-    { icon: '◇', title: 'Playoff uncertainty', text: 'В плей-офф твоя калибровка хуже на 8 пунктов.', evidence: '9 матчей' }
+  const diagnosticBank = [
+    { id:'t1',skill:'tactical',tier:1,q:'Команда владеет мячом 68%, но редко входит в штрафную. Какой вывод сильнее?',o:['Она полностью контролирует матч','Владение без продвижения ещё не означает контроль','Соперник точно устал'],c:1,why:'Владение — лишь один сигнал. Нужны продвижение, качество входов и контроль переходов.' },
+    { id:'t2',skill:'tactical',tier:2,q:'Соперник защищается узким низким блоком. Какой ответ наиболее логичен?',o:['Постоянно атаковать через центр','Растянуть блок шириной и менять направление атаки','Сразу перейти на дальние удары'],c:1,why:'Ширина и быстрые переводы вынуждают компактный блок двигаться и открывать коридоры.' },
+    { id:'c1',skill:'context',tier:1,q:'Фаворит играет третий матч за семь дней. Как использовать этот факт?',o:['Автоматически прогнозировать поражение','Учесть вместе с ротацией, стилем и глубиной состава','Игнорировать: сильные всегда справляются'],c:1,why:'Нагрузка — фактор риска, но не самостоятельный приговор.' },
+    { id:'c2',skill:'context',tier:2,q:'Команде достаточно ничьей в ответном матче. Что меняется?',o:['Ничего, стиль всегда одинаков','Ценность риска и темп игры могут измениться','Она обязательно будет только защищаться'],c:1,why:'Турнирная ситуация меняет цену владения, риска и переходов, но не гарантирует один сценарий.' },
+    { id:'d1',skill:'data',tier:1,q:'xG вырос из-за одного пенальти. Что делать?',o:['Считать доказательством доминирования','Отделить пенальти и оценить остальные моменты','Не использовать xG вообще'],c:1,why:'Агрегат нужно разложить на происхождение моментов и контекст.' },
+    { id:'d2',skill:'data',tier:2,q:'Команда нанесла 18 ударов, но 14 — из-за штрафной. Как интерпретировать?',o:['18 ударов всегда означают доминирование','Объём высокий, качество и зоны требуют проверки','Такая команда точно забьёт следующей'],c:1,why:'Количество без качества и расположения может вводить в заблуждение.' },
+    { id:'de1',skill:'decision',tier:1,q:'Ты уверен на 80%, но ключевой состав ещё неизвестен.',o:['Оставить 80%','Повысить до 90%','Снизить уверенность из-за неизвестности'],c:2,why:'Уверенность должна отражать неизвестные факторы, а не только силу основной гипотезы.' },
+    { id:'de2',skill:'decision',tier:2,q:'Два сценария почти равны, но один тебе эмоционально приятнее.',o:['Выбрать приятный','Записать оба и снизить уверенность','Не указывать риск'],c:1,why:'Альтернативный сценарий и пониженная уверенность защищают от эмоционального bias.' },
+    { id:'l1',skill:'learning',tier:1,q:'Прогноз верный, но аргументы не подтвердились.',o:['Решение было отличным','Результат верный, логика требует пересмотра','Анализ не нужен'],c:1,why:'NOVIQ разделяет удачу и качество процесса.' },
+    { id:'l2',skill:'learning',tier:2,q:'Ты дважды повторил одну ошибку. Лучший следующий шаг?',o:['Игнорировать малую выборку','Сформулировать правило и проверить его в похожем матче','Снизить все прогнозы до 50%'],c:1,why:'Обучение требует конкретного правила и нового проверяемого решения.' }
   ];
 
   let state = loadState();
+  let activeFilter = 'for-you';
   let deferredInstallPrompt = null;
   let toastTimer = null;
-  let activeFilter = 'for-you';
-  let diagnosticStep = 0;
-  let diagnosticAnswers = [];
+  let diagnosticSession = null;
 
-  const qs = (selector, root = document) => root.querySelector(selector);
-  const qsa = (selector, root = document) => [...root.querySelectorAll(selector)];
-  const modalLayer = qs('#modalLayer');
-  const modalTitle = qs('#modalTitle');
-  const modalKicker = qs('#modalKicker');
-  const modalContent = qs('#modalContent');
+  const modalLayer = $('#modalLayer');
+  const modalTitle = $('#modalTitle');
+  const modalKicker = $('#modalKicker');
+  const modalContent = $('#modalContent');
 
-  function loadState() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      return { ...defaultState, ...parsed, notifications: { ...defaultState.notifications, ...(parsed?.notifications || {}) } };
-    } catch {
-      return structuredClone(defaultState);
-    }
+  function loadState(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(saved) return mergeDeep(clone(defaultState), saved);
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_KEY));
+      if(legacy){
+        const migrated = mergeDeep(clone(defaultState), { language:legacy.language, theme:legacy.theme, sportsIQ:legacy.sportsIQ, thesis:legacy.thesis, decisions:legacy.decisions, notifications:legacy.notifications });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+    }catch(e){ console.warn('State recovery failed', e); }
+    return clone(defaultState);
+  }
+  function mergeDeep(target, source){
+    if(!source || typeof source !== 'object') return target;
+    Object.keys(source).forEach(k=>{ if(source[k] && typeof source[k]==='object' && !Array.isArray(source[k])) target[k]=mergeDeep(target[k]||{},source[k]); else if(source[k]!==undefined) target[k]=source[k]; });
+    return target;
+  }
+  function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  function escapeHtml(v=''){ return String(v).replace(/[&<>'"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[c])); }
+  function formatNumber(n){ return new Intl.NumberFormat(state.language==='en'?'en-US':state.language==='ua'?'uk-UA':'ru-RU').format(n); }
+  function skillLabel(key){ return ({tactical:'Tactical IQ',context:'Context IQ',data:'Data IQ',decision:'Decision IQ',learning:'Learning IQ'})[key]; }
+
+  function applyState(){
+    document.documentElement.dataset.theme=state.theme;
+    document.documentElement.lang=state.language==='ua'?'uk':state.language;
+    $$('[data-i18n]').forEach(n=>{ const v=translations[state.language]?.[n.dataset.i18n]; if(v)n.textContent=v; });
+    $('#sportsIqValue').textContent=formatNumber(state.sportsIQ);
+    $('#profileIQ').textContent=formatNumber(state.sportsIQ);
+    $('#profileLoops').textContent=state.completedLoops;
+    $('#calibrationValue').textContent=`${state.calibration.score}%`;
+    $('#profileCalibration').textContent=`${state.calibration.score}%`;
+    $('#currentTheme').textContent=state.theme==='dark'?'Dark Elite':'Light Elite';
+    $('#currentLanguage').textContent=state.language==='ru'?'Русский':state.language==='ua'?'Українська':'English';
+    $('#missionTitle').textContent=state.mission.title;
+    $('#missionCopy').textContent=state.mission.copy;
+    $('#missionProgressBar').style.setProperty('--progress',`${Math.min(100,state.mission.progress/state.mission.target*100)}%`);
+    $('#missionProgressText').textContent=`${state.mission.progress}/${state.mission.target} completed`;
+    renderHeroSkills(); renderLoop(); renderMiniCalibration(); renderMemory(); renderMatches(); renderSkills(); renderTrend(); renderPatterns(); renderDecisions();
   }
 
-  function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  function renderHeroSkills(){
+    $('#heroSkillList').innerHTML=Object.entries(state.skills).map(([k,v])=>`<div class="mini-skill"><span>${skillLabel(k)}</span><b>${Math.round(v*100)}</b><i style="--value:${v*100}%"></i></div>`).join('');
+    const trust=Math.round(Object.values(state.skillTrust).reduce((a,b)=>a+b,0)/5);
+    $('#iqConfidenceLabel').textContent=`Model confidence ${trust}%`;
+    $('#nextMilestone').textContent=`${Math.max(0,8900-state.sportsIQ)} IQ до Master Analyst`;
+  }
+  function currentLoopStage(){
+    if(!state.diagnostic.completed) return 0;
+    if(!state.thesis) return 1;
+    if(!state.thesis.review) return 2;
+    if(!state.thesis.locked) return 3;
+    const replay=state.decisions.find(d=>d.id==='int-bay');
+    if(replay && !replay.completed) return 4;
+    return 5;
+  }
+  function renderLoop(){
+    const stage=currentLoopStage();
+    const steps=[['◎','Diagnose'],['◫','Briefing'],['✎','Thesis'],['✦','Review'],['↺','Replay'],['◇','Learn']];
+    const copy=[['Начни диагностику','Создай стартовый профиль навыков'],['Открой AI Briefing','Собери факты, сигналы и неизвестные'],['Создай Match Thesis','Зафиксируй сценарий, риск и уверенность'],['Получи AI Review','Устрани противоречия и blind spots'],['Пройди Decision Replay','Сравни гипотезу с реальным матчем'],['Закрепи урок','Sports Memory обновит следующий шаг']][stage];
+    $('#loopCard').innerHTML=`<div class="loop-steps">${steps.map((s,i)=>`${i?'<i class="loop-line"></i>':''}<div class="loop-step ${i<stage?'done':i===stage?'active':''}"><span>${i<stage?'✓':s[0]}</span><small>${s[1]}</small></div>`).join('')}</div><div class="loop-card-footer"><div><b>${copy[0]}</b><small>${copy[1]}</small></div><button class="compact-button pressable" data-action="continue-loop">Продолжить →</button></div>`;
+  }
+  function renderMiniCalibration(){
+    const vals=state.calibration.history.slice(-7); $('#miniCalibrationChart').innerHTML=vals.map(v=>`<i style="--h:${Math.max(18,(v-55)*2.5)}px"></i>`).join('');
+    $('#calibrationDelta').textContent=`+${Math.max(0,vals.at(-1)-vals[0])} this month`;
+  }
+  function renderMemory(){
+    $('#homeMemoryCards').innerHTML=state.patterns.map(p=>`<button class="memory-card pressable" data-action="open-pattern" data-pattern="${p.id}"><div class="memory-card-top"><span>${p.skill}</span><i class="badge ${p.severity==='strength'?'badge-green':'badge-purple'}">${p.severity==='strength'?'STRENGTH':'WATCH'}</i></div><h3>${p.title}</h3><p>${p.summary}</p><div class="evidence-row">${p.evidence.slice(0,3).map(e=>`<i>${escapeHtml(e)}</i>`).join('')}</div></button>`).join('');
+  }
+  function renderMatches(){
+    const list=$('#matchList'); if(!list)return;
+    list.innerHTML=matches.filter(m=>m.group.includes(activeFilter)).map(m=>`<article class="match-list-card pressable" data-action="open-match-card" data-match-id="${m.id}"><div class="match-list-top"><span>${m.tournament}</span><span>Intelligence ${m.intelligence}</span></div><div class="match-list-teams"><div class="match-list-team"><span class="mini-crest">${m.hc}</span><span><b>${m.home}</b><small>Home</small></span></div><div class="match-list-center"><b>${m.score||m.time}</b><small>${m.score?m.time:'Today'}</small></div><div class="match-list-team"><span><b>${m.away}</b><small>Away</small></span><span class="mini-crest">${m.ac}</span></div></div><div class="match-list-footer"><span>${m.status}</span><button data-action="open-match-card" data-match-id="${m.id}">Open →</button></div></article>`).join('') || '<div class="panel"><p class="body-copy">Нет матчей в этом фильтре.</p></div>';
+  }
+  function renderSkills(){
+    $('#skillDashboard').innerHTML=Object.entries(state.skills).map(([k,v])=>`<article class="skill-card pressable" data-action="open-skill" data-skill="${k}"><div class="skill-card-top"><h3>${skillLabel(k)}</h3><strong>${Math.round(v*100)}</strong></div><p>${skillDescription(k)}</p><div class="skill-bar"><i style="--value:${v*100}%"></i></div><div class="skill-trust">Evidence confidence ${state.skillTrust[k]}%</div></article>`).join('');
+  }
+  function skillDescription(k){return ({tactical:'Сценарии, пространство, фазы игры',context:'Составы, мотивация, нагрузка',data:'Качество и ограничения статистики',decision:'Риск, альтернативы, уверенность',learning:'Выводы и перенос уроков'})[k];}
+  function renderTrend(){
+    const iq=[66,70,72,75,78,82,86,90],cal=[62,63,64,67,68,70,71,72];
+    $('#trendChart').innerHTML=iq.map((v,i)=>`<div class="trend-column"><i style="--iq:${v}%"></i><b style="--cal:${cal[i]}%"></b></div>`).join('');
+  }
+  function renderPatterns(){
+    $('#patternList').innerHTML=state.patterns.map(p=>`<button class="pattern-card pressable" data-action="open-pattern" data-pattern="${p.id}"><span class="pattern-icon">${p.icon}</span><span><b>${p.title}</b><small>${p.summary}</small></span><i>${p.evidence.length} evidence</i></button>`).join('');
+  }
+  function renderDecisions(){
+    const thesis=state.thesis?[{id:'current-thesis',match:'Manchester City — Real Madrid',score:state.thesis.locked?'LOCK':'DRAFT',date:'Today',lesson:state.thesis.reason||'Thesis in progress'}]:[];
+    $('#decisionList').innerHTML=[...thesis,...state.decisions].map(d=>`<button class="decision-card pressable" data-action="open-decision" data-decision="${d.id}"><div><b>${d.match}</b><small>${d.date}</small><small>${escapeHtml(d.lesson)}</small></div><span>${d.score}</span></button>`).join('');
   }
 
-  function applyState() {
-    document.documentElement.dataset.theme = state.theme;
-    document.documentElement.lang = state.language === 'ua' ? 'uk' : state.language;
-    qs('#sportsIqValue').textContent = formatNumber(state.sportsIQ);
-    qs('#currentTheme').textContent = state.theme === 'dark' ? 'Dark Elite' : 'Light Elite';
-    qs('#currentLanguage').textContent = state.language === 'ru' ? 'Русский' : state.language === 'ua' ? 'Українська' : 'English';
-    translatePage();
-    renderMatches();
-    renderPatterns();
-    renderDecisions();
-  }
+  function navigate(page){ $$('.page').forEach(p=>p.classList.toggle('active',p.dataset.page===page)); $$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===page)); const sc=$(`.page[data-page="${page}"] .page-scroll`); if(sc)sc.scrollTop=0; }
+  function openModal({title,kicker='NOVIQ 1.1',html}){ modalTitle.textContent=title; modalKicker.textContent=kicker; modalContent.innerHTML=html; modalLayer.classList.add('open'); modalLayer.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; setTimeout(()=> $('button,input,textarea,select',modalContent)?.focus({preventScroll:true}),250); }
+  function closeModal(){ modalLayer.classList.remove('open'); modalLayer.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  function toast(msg){ const t=$('#toast'); clearTimeout(toastTimer); t.textContent=msg; t.classList.add('show'); if(navigator.vibrate)navigator.vibrate(8); toastTimer=setTimeout(()=>t.classList.remove('show'),2200); }
 
-  function translatePage() {
-    const dict = translations[state.language] || translations.ru;
-    qsa('[data-i18n]').forEach((node) => {
-      const key = node.dataset.i18n;
-      if (dict[key]) node.textContent = dict[key];
-    });
-  }
-
-  function formatNumber(value) {
-    return new Intl.NumberFormat(state.language === 'en' ? 'en-US' : state.language === 'ua' ? 'uk-UA' : 'ru-RU').format(value);
-  }
-
-  function navigate(pageName) {
-    qsa('.page').forEach((page) => page.classList.toggle('active', page.dataset.page === pageName));
-    qsa('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.nav === pageName));
-    const activePage = qs(`.page[data-page="${pageName}"] .page-scroll`);
-    if (activePage) activePage.scrollTop = 0;
-  }
-
-  function renderMatches() {
-    const list = qs('#matchList');
-    if (!list) return;
-    const visible = matches.filter((match) => match.group.includes(activeFilter));
-    list.innerHTML = visible.map((match) => `
-      <article class="match-list-card pressable" data-action="open-match-card" data-match-id="${match.id}">
-        <div class="match-list-top"><span>${match.tournament}</span><span>Intelligence ${match.intelligence}</span></div>
-        <div class="match-list-teams">
-          <div class="match-list-team"><span class="mini-crest">${match.homeCode}</span><span><b>${match.home}</b><small>Home</small></span></div>
-          <div class="match-list-center"><b>${match.score || match.time}</b><small>${match.score ? match.time : 'Today'}</small></div>
-          <div class="match-list-team"><span><b>${match.away}</b><small>Away</small></span><span class="mini-crest">${match.awayCode}</span></div>
-        </div>
-        <div class="match-list-footer"><span>${match.status}</span><button class="pressable" data-action="open-match-card" data-match-id="${match.id}">Open →</button></div>
-      </article>`).join('');
-  }
-
-  function renderPatterns() {
-    const list = qs('#patternList');
-    if (!list) return;
-    list.innerHTML = patterns.map((pattern) => `
-      <button class="pattern-card pressable" data-action="open-pattern" data-pattern="${pattern.title}">
-        <span class="pattern-icon">${pattern.icon}</span>
-        <span><b>${pattern.title}</b><small>${pattern.text}</small></span>
-        <i>${pattern.evidence}</i>
-      </button>`).join('');
-  }
-
-  function renderDecisions() {
-    const list = qs('#decisionList');
-    if (!list) return;
-    const thesisDecision = state.thesis ? [{ match: 'Manchester City — Real Madrid', score: 'LOCK', date: 'Today', lesson: state.thesis.reason || 'Thesis зафиксирован и ждёт Decision Replay.' }] : [];
-    list.innerHTML = [...thesisDecision, ...state.decisions].map((decision) => `
-      <button class="decision-card pressable" data-action="open-decision" data-match="${escapeHtml(decision.match)}">
-        <div><b>${decision.match}</b><small>${decision.date}</small><small>${escapeHtml(decision.lesson)}</small></div>
-        <span>${decision.score}</span>
-      </button>`).join('');
-  }
-
-  function openModal({ title, kicker = 'NOVIQ', html }) {
-    modalTitle.textContent = title;
-    modalKicker.textContent = kicker;
-    modalContent.innerHTML = html;
-    modalLayer.classList.add('open');
-    modalLayer.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => qs('button, input, textarea, select', modalContent)?.focus({ preventScroll: true }), 330);
-  }
-
-  function closeModal() {
-    modalLayer.classList.remove('open');
-    modalLayer.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  }
-
-  function showToast(message) {
-    const toast = qs('#toast');
-    clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.classList.add('show');
-    toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
-    if (navigator.vibrate) navigator.vibrate(10);
-  }
-
-  function toggleTheme() {
-    state.theme = state.theme === 'dark' ? 'light' : 'dark';
-    saveState();
-    applyState();
-    showToast(state.theme === 'dark' ? 'Dark Elite активирован' : 'Light Elite активирован');
-  }
-
-  function openThesis() {
-    const existing = state.thesis || { outcome: 'mci', scenario: '', reason: '', risk: '', changeMind: '', confidence: 68 };
-    openModal({
-      kicker: 'UNIQUE INTELLIGENCE LOOP',
-      title: state.thesis?.locked ? 'Thesis зафиксирован' : 'Match Thesis',
-      html: state.thesis?.locked ? lockedThesisHtml(existing) : thesisFormHtml(existing)
-    });
-    if (!state.thesis?.locked) bindThesisForm(existing);
-  }
-
-  function thesisFormHtml(thesis) {
-    return `
-      <p class="modal-copy">Зафиксируй не только результат, а свою футбольную гипотезу: сценарий, аргументы, риск и уровень уверенности.</p>
-      <div class="form-group"><label>Ожидаемый исход <small>обязательно</small></label><div class="option-grid" id="outcomeOptions">
-        <button class="option-button pressable ${thesis.outcome === 'mci' ? 'selected' : ''}" data-outcome="mci">Man City</button>
-        <button class="option-button pressable ${thesis.outcome === 'draw' ? 'selected' : ''}" data-outcome="draw">Ничья</button>
-        <button class="option-button pressable ${thesis.outcome === 'rma' ? 'selected' : ''}" data-outcome="rma">Real Madrid</button>
-      </div></div>
-      <div class="form-group"><label for="thesisScenario">Сценарий матча <small>что будет происходить</small></label><textarea class="textarea" id="thesisScenario" placeholder="Например: City контролирует территорию, Madrid ищет быстрые переходы...">${escapeHtml(thesis.scenario)}</textarea></div>
-      <div class="form-group"><label for="thesisReason">Ключевая причина <small>почему</small></label><textarea class="textarea" id="thesisReason" placeholder="Свяжи прогноз с тактикой, контекстом или данными...">${escapeHtml(thesis.reason)}</textarea></div>
-      <div class="form-group"><label for="thesisRisk">Главный риск <small>что разрушит гипотезу</small></label><input class="input" id="thesisRisk" value="${escapeHtml(thesis.risk)}" placeholder="Ранний гол, состав, усталость, стандарты..." /></div>
-      <div class="form-group"><label for="changeMind">Что изменит твоё мнение? <small>защита от bias</small></label><input class="input" id="changeMind" value="${escapeHtml(thesis.changeMind)}" placeholder="Факт или событие, после которого ты пересмотришь прогноз" /></div>
-      <div class="form-group"><label>Уверенность <small>не точность, а честная вероятность</small></label><div class="range-wrap"><input id="confidenceRange" type="range" min="40" max="95" value="${thesis.confidence}" /><span class="confidence-value" id="confidenceValue">${thesis.confidence}%</span></div></div>
-      <div class="modal-actions"><button class="secondary-button pressable" data-action="save-thesis-draft">Сохранить черновик</button><button class="primary-button pressable" data-action="review-thesis">AI Review →</button></div>`;
-  }
-
-  function bindThesisForm(thesis) {
-    let selectedOutcome = thesis.outcome;
-    qsa('[data-outcome]', modalContent).forEach((button) => button.addEventListener('click', () => {
-      selectedOutcome = button.dataset.outcome;
-      qsa('[data-outcome]', modalContent).forEach((item) => item.classList.toggle('selected', item === button));
-    }));
-    qs('#confidenceRange', modalContent).addEventListener('input', (event) => { qs('#confidenceValue', modalContent).textContent = `${event.target.value}%`; });
-    modalContent.dataset.selectedOutcome = selectedOutcome;
-    modalContent.addEventListener('click', (event) => {
-      const outcomeButton = event.target.closest('[data-outcome]');
-      if (outcomeButton) modalContent.dataset.selectedOutcome = outcomeButton.dataset.outcome;
-    });
-  }
-
-  function collectThesis() {
-    return {
-      outcome: modalContent.dataset.selectedOutcome || 'mci',
-      scenario: qs('#thesisScenario', modalContent)?.value.trim() || '',
-      reason: qs('#thesisReason', modalContent)?.value.trim() || '',
-      risk: qs('#thesisRisk', modalContent)?.value.trim() || '',
-      changeMind: qs('#changeMind', modalContent)?.value.trim() || '',
-      confidence: Number(qs('#confidenceRange', modalContent)?.value || 68),
-      updatedAt: new Date().toISOString(),
-      locked: false
-    };
-  }
-
-  function saveThesisDraft() {
-    state.thesis = collectThesis();
-    saveState();
-    renderDecisions();
-    showToast('Черновик Thesis сохранён');
-  }
-
-  function reviewThesis() {
-    const thesis = collectThesis();
-    const missing = [];
-    if (thesis.scenario.length < 18) missing.push('сценарий');
-    if (thesis.reason.length < 20) missing.push('ключевую причину');
-    if (thesis.risk.length < 8) missing.push('риск');
-    if (missing.length) {
-      showToast(`Добавь: ${missing.join(', ')}`);
-      return;
-    }
-    state.thesis = thesis;
-    saveState();
-    const specificity = Math.min(94, 58 + Math.round((thesis.scenario.length + thesis.reason.length) / 10));
-    const calibration = thesis.confidence > 78 ? 'Уверенность выглядит завышенной для равного матча.' : thesis.confidence < 55 ? 'Ты осторожен. Проверь, не недооцениваешь ли силу аргументов.' : 'Уровень уверенности выглядит реалистично.';
-    modalTitle.textContent = 'AI Thesis Review';
-    modalKicker.textContent = 'BEFORE THE MATCH';
-    modalContent.innerHTML = `
-      <div class="review-card success"><h3>Сильная сторона · ${specificity}/100</h3><p>Ты связал ожидаемый сценарий с конкретной причиной, а не ограничился выбором победителя.</p></div>
-      <div class="review-card warning"><h3>Blind spot</h3><p>${thesis.risk ? `Ты назвал риск: «${escapeHtml(thesis.risk)}». Добавь, как он изменит структуру матча.` : 'Главный риск пока не сформулирован.'}</p></div>
-      <div class="review-card purple"><h3>Confidence Check · ${thesis.confidence}%</h3><p>${calibration}</p></div>
-      <div class="info-card"><h3>Alternative Scenario</h3><p>Madrid переживает первые 25 минут без гола, затем провоцирует потери в полуфлангах и переводит матч в переходный режим.</p></div>
-      <div class="info-card"><h3>Вопрос NOVIQ</h3><p>Какой один факт после публикации составов заставит тебя снизить или повысить уверенность?</p></div>
-      <div class="modal-actions"><button class="secondary-button pressable" data-action="edit-thesis">Улучшить Thesis</button><button class="primary-button pressable" data-action="lock-thesis">Зафиксировать →</button></div>`;
-  }
-
-  function lockedThesisHtml(thesis) {
-    const outcomeLabel = thesis.outcome === 'mci' ? 'Manchester City' : thesis.outcome === 'rma' ? 'Real Madrid' : 'Ничья';
-    return `
-      <div class="review-card success"><h3>Decision timestamp сохранён</h3><p>${new Date(thesis.lockedAt || thesis.updatedAt).toLocaleString()}</p></div>
-      <div class="info-card"><h3>Исход · ${outcomeLabel} · ${thesis.confidence}%</h3><p>${escapeHtml(thesis.scenario)}</p></div>
-      <div class="info-card"><h3>Почему</h3><p>${escapeHtml(thesis.reason)}</p></div>
-      <div class="info-card"><h3>Риск</h3><p>${escapeHtml(thesis.risk)}</p></div>
-      <div class="modal-actions one"><button class="primary-button pressable" data-action="open-demo-replay">Открыть demo Decision Replay</button></div>`;
-  }
-
-  function lockThesis() {
-    state.thesis = { ...state.thesis, locked: true, lockedAt: new Date().toISOString() };
-    state.sportsIQ += 8;
-    saveState();
-    applyState();
-    modalTitle.textContent = 'Thesis зафиксирован';
-    modalKicker.textContent = 'DECISION LOCK';
-    modalContent.innerHTML = lockedThesisHtml(state.thesis);
-    showToast('Thesis зафиксирован. Скрытое редактирование отключено.');
-  }
-
-  function openReplay() {
-    openModal({
-      kicker: 'DECISION REPLAY',
-      title: 'Inter 2–1 Bayern',
-      html: `
-        <div class="replay-hero"><span>OVERALL DECISION SCORE</span><strong>82</strong><p>Ты не угадал точный счёт, но правильно определил характер матча и главный тактический конфликт.</p></div>
-        <div class="score-breakdown">
-          ${scoreRow('Thesis Quality', 88)}${scoreRow('Tactical IQ', 91)}${scoreRow('Context IQ', 76)}${scoreRow('Risk Management', 72)}${scoreRow('Calibration', 69)}
-        </div>
-        <div class="replay-card"><h3>Что подтвердилось</h3><p>Inter действительно вынудил Bayern атаковать через широкие зоны и получил пространство для вертикальных выходов.</p></div>
-        <div class="replay-card"><h3>Что ты пропустил</h3><p>Ты недооценил влияние стандартов и поставил 81% уверенности там, где разумный диапазон был ближе к 65–70%.</p></div>
-        <div class="review-card success"><h3>Sports Memory обновлена</h3><p>Новый паттерн: сильное тактическое чтение, но завышенная уверенность в равных матчах плей-офф.</p></div>
-        <div class="modal-actions one"><button class="primary-button pressable" data-action="complete-replay">Сохранить урок и получить +24 IQ</button></div>`
-    });
-  }
-
-  function completeReplay() {
-    if (!state.decisions.some((d) => d.match === 'Inter — Bayern' && d.completedNow)) {
-      state.sportsIQ += 24;
-      state.decisions.unshift({ match: 'Inter — Bayern', score: 82, date: 'Today', lesson: 'Урок сохранён: снизить уверенность в равных матчах плей-офф.', completedNow: true });
-      saveState();
-      applyState();
-    }
-    closeModal();
-    showToast('+24 Sports IQ · урок сохранён');
-  }
-
-  function scoreRow(label, score) {
-    return `<div class="score-row"><span>${label}</span><i><b style="width:${score}%"></b></i><b>${score}</b></div>`;
-  }
-
-  function openDiagnostic() {
-    diagnosticStep = 0;
-    diagnosticAnswers = [];
-    openModal({ kicker: 'STARTING ASSESSMENT', title: 'Sports IQ Diagnostic', html: diagnosticHtml() });
+  function openDiagnostic(){
+    const base=diagnosticBank.filter(q=>q.tier===1); const advanced=diagnosticBank.filter(q=>q.tier===2);
+    diagnosticSession={queue:[...base],advanced,step:0,answers:[],selected:null,confidence:65};
+    openModal({title:'Sports IQ Diagnostic V2',kicker:'ADAPTIVE ASSESSMENT',html:'<p class="modal-copy">10 ситуаций измерят не энциклопедические знания, а качество решений и честность уверенности. Сложность адаптируется после первых ответов.</p><div class="diagnostic-progress" id="diagnosticProgress"></div><div id="diagnosticQuestion"></div>'});
     renderDiagnosticQuestion();
   }
-
-  const diagnosticQuestions = [
-    { question: 'Команда владеет мячом 68%, но почти не входит в штрафную. Какой вывод сильнее?', options: ['Она полностью контролирует матч', 'Владение без продвижения ещё не означает контроль', 'Соперник точно устал'], correct: 1, skill: 'Tactical' },
-    { question: 'Фаворит играет третий матч за семь дней. Как использовать этот факт?', options: ['Автоматически прогнозировать поражение', 'Учесть как риск вместе с ротацией и стилем', 'Игнорировать: сильные всегда справляются'], correct: 1, skill: 'Context' },
-    { question: 'xG команды вырос из-за одного пенальти. Что делать?', options: ['Считать это доказательством доминирования', 'Отделить пенальти и посмотреть качество остальных моментов', 'Не использовать xG вообще'], correct: 1, skill: 'Data' },
-    { question: 'Ты уверен в прогнозе на 80%, но ключевой состав ещё неизвестен.', options: ['Оставить 80%', 'Повысить до 90%', 'Снизить уверенность из-за неизвестности'], correct: 2, skill: 'Decision' },
-    { question: 'Прогноз оказался верным, но аргументы не подтвердились.', options: ['Решение было отличным', 'Результат верный, логика требует пересмотра', 'Раз результат верный — анализ не нужен'], correct: 1, skill: 'Learning' }
-  ];
-
-  function diagnosticHtml() {
-    return `<p class="modal-copy">Пять ситуаций измерят не знания фактов, а качество твоих решений.</p><div class="diagnostic-progress" id="diagnosticProgress"></div><div id="diagnosticQuestion"></div>`;
+  function renderDiagnosticQuestion(){
+    const s=diagnosticSession, q=s.queue[s.step];
+    $('#diagnosticProgress',modalContent).innerHTML=Array.from({length:10},(_,i)=>`<i class="${i<s.step?'done':''}"></i>`).join('');
+    $('#diagnosticQuestion',modalContent).innerHTML=`<div class="diagnostic-meta"><span class="badge badge-purple">${skillLabel(q.skill)} · ${q.tier===2?'ADVANCED':'CORE'}</span><span class="eyebrow">${s.step+1}/10</span></div><h3 style="font-size:18px;line-height:1.35;margin:12px 0">${q.q}</h3>${q.o.map((o,i)=>`<button class="quiz-option pressable" data-action="select-diagnostic" data-answer="${i}">${o}</button>`).join('')}<div class="quiz-confidence"><label class="eyebrow">Насколько ты уверен в ответе?</label><div class="range-wrap"><input type="range" id="diagnosticConfidence" min="40" max="95" value="65"><span class="confidence-value" id="diagnosticConfidenceValue">65%</span></div><button class="primary-button pressable" style="width:100%;margin-top:12px" data-action="submit-diagnostic" disabled id="diagnosticSubmit">Ответить →</button></div>`;
+  }
+  function selectDiagnostic(btn){ diagnosticSession.selected=Number(btn.dataset.answer); $$('.quiz-option',modalContent).forEach(b=>b.classList.toggle('selected',b===btn)); $('#diagnosticSubmit',modalContent).disabled=false; }
+  function submitDiagnostic(){
+    const s=diagnosticSession,q=s.queue[s.step]; if(s.selected===null)return;
+    const confidence=Number($('#diagnosticConfidence',modalContent).value); const correct=s.selected===q.c;
+    s.answers.push({id:q.id,skill:q.skill,tier:q.tier,correct,confidence});
+    if(s.step<5){ const adv=s.advanced.find(x=>x.skill===q.skill); if(adv)s.queue.push(adv); }
+    s.step++; s.selected=null;
+    if(s.step<10){ renderDiagnosticQuestion(); return; }
+    finishDiagnostic();
+  }
+  function finishDiagnostic(){
+    const answers=diagnosticSession.answers; const bySkill={};
+    Object.keys(state.skills).forEach(k=>{const a=answers.filter(x=>x.skill===k);const correct=a.filter(x=>x.correct).length;const cal=a.reduce((sum,x)=>sum+(x.correct?100-x.confidence:Math.max(0,80-x.confidence)),0)/(a.length||1);bySkill[k]=Math.min(0.96,0.56+correct*0.18+cal/500);});
+    state.skills=bySkill; Object.keys(bySkill).forEach(k=>state.skillTrust[k]=Math.min(92,64+answers.filter(a=>a.skill===k).length*8));
+    const avg=Object.values(bySkill).reduce((a,b)=>a+b,0)/5; state.sportsIQ=Math.max(7000,Math.round(6100+avg*3000));
+    state.diagnostic={completed:true,level:'adaptive',answers,lastAt:new Date().toISOString()}; save(); applyState();
+    const strongest=Object.entries(bySkill).sort((a,b)=>b[1]-a[1])[0], weakest=Object.entries(bySkill).sort((a,b)=>a[1]-b[1])[0];
+    modalTitle.textContent='Твой адаптивный профиль';modalKicker.textContent='DIAGNOSTIC COMPLETE';
+    modalContent.innerHTML=`<div class="replay-hero"><span>SPORTS IQ</span><strong>${formatNumber(state.sportsIQ)}</strong><p>Рейтинг рассчитан по качеству выбора, сложности вопроса и калибровке уверенности.</p></div>${Object.entries(bySkill).map(([k,v])=>`<div class="skill-result"><span>${skillLabel(k)}</span><b>${Math.round(v*100)}</b><i style="--value:${v*100}%"></i></div>`).join('')}<div class="review-card success"><h3>Сильнейший навык · ${skillLabel(strongest[0])}</h3><p>${skillDescription(strongest[0])}</p></div><div class="review-card warning"><h3>Первая зона развития · ${skillLabel(weakest[0])}</h3><p>NOVIQ подберёт миссию и матч, где этот навык можно проверить.</p></div><div class="modal-actions one"><button class="primary-button pressable" data-action="close-modal">Перейти в NOVIQ</button></div>`;
   }
 
-  function renderDiagnosticQuestion() {
-    const progress = qs('#diagnosticProgress', modalContent);
-    progress.innerHTML = diagnosticQuestions.map((_, index) => `<i class="${index < diagnosticStep ? 'done' : ''}"></i>`).join('');
-    const question = diagnosticQuestions[diagnosticStep];
-    qs('#diagnosticQuestion', modalContent).innerHTML = `
-      <span class="badge badge-purple">${question.skill} IQ · ${diagnosticStep + 1}/${diagnosticQuestions.length}</span>
-      <h3 style="font-size:18px;line-height:1.35;margin:14px 0">${question.question}</h3>
-      ${question.options.map((option, index) => `<button class="quiz-option pressable" data-action="answer-diagnostic" data-answer="${index}">${option}</button>`).join('')}`;
+  function thesisDefault(){return {mode:'expert',outcome:'mci',scenario:'',reason:'',secondaryReason:'',keyPlayer:'',risk:'',alternative:'',changeMind:'',confidence:68,sources:['briefing'],customFactors:[],versions:[],locked:false,review:null};}
+  function openThesis(){ const t=state.thesis||thesisDefault(); openModal({title:t.locked?'Thesis зафиксирован':'Match Thesis V2',kicker:'UNIQUE INTELLIGENCE LOOP',html:t.locked?lockedThesisHtml(t):thesisFormHtml(t)}); if(!t.locked)bindThesisForm(t); }
+  function thesisFormHtml(t){
+    return `<p class="modal-copy">Создай проверяемую футбольную гипотезу. NOVIQ сохранит версии, проверит причинность, bias и честность уверенности.</p><div class="form-group"><label>Режим анализа <small>quick / expert</small></label><div class="mode-row"><button class="mode-button ${t.mode==='quick'?'selected':''}" data-mode="quick">Quick</button><button class="mode-button ${t.mode==='expert'?'selected':''}" data-mode="expert">Expert</button></div></div><div class="form-group"><label>Ожидаемый исход <small>обязательно</small></label><div class="option-grid">${[['mci','Man City'],['draw','Ничья'],['rma','Real Madrid']].map(([v,l])=>`<button class="option-button ${t.outcome===v?'selected':''}" data-outcome="${v}">${l}</button>`).join('')}</div></div><div class="form-group"><label>Источники решения <small>отметь использованные</small></label><div class="source-grid">${[['briefing','AI Briefing'],['stats','Statistics'],['lineups','Lineups'],['own','Own analysis']].map(([v,l])=>`<button class="source-chip ${t.sources.includes(v)?'selected':''}" data-source="${v}">${l}</button>`).join('')}</div></div><div class="form-group"><label for="thesisScenario">Сценарий матча <small>что будет происходить</small></label><textarea class="textarea" id="thesisScenario" placeholder="City контролирует территорию, Madrid ищет переходы...">${escapeHtml(t.scenario)}</textarea></div><div class="form-group"><label for="thesisReason">Ключевая причина <small>причина → сценарий</small></label><textarea class="textarea" id="thesisReason" placeholder="Свяжи прогноз с тактикой, контекстом или данными...">${escapeHtml(t.reason)}</textarea></div><div class="expert-only" ${t.mode==='quick'?'hidden':''}><div class="form-group"><label for="secondaryReason">Второй независимый аргумент <small>не повторяй первый</small></label><input class="input" id="secondaryReason" value="${escapeHtml(t.secondaryReason)}" placeholder="Контекст, данные или конкретный matchup"></div><div class="form-group"><label for="keyPlayer">Ключевой игрок / зона <small>почему важен</small></label><input class="input" id="keyPlayer" value="${escapeHtml(t.keyPlayer)}" placeholder="Игрок, полуфланг, прессинг-зона..."></div></div><div class="form-group"><label for="thesisRisk">Главный риск <small>обязательно</small></label><input class="input" id="thesisRisk" value="${escapeHtml(t.risk)}" placeholder="Что способно разрушить гипотезу?"></div><div class="form-group"><label for="alternative">Альтернативный сценарий <small>защита от tunnel vision</small></label><input class="input" id="alternative" value="${escapeHtml(t.alternative)}" placeholder="Как матч может пойти иначе?"></div><div class="form-group"><label for="changeMind">Что изменит твоё мнение? <small>falsification trigger</small></label><input class="input" id="changeMind" value="${escapeHtml(t.changeMind)}" placeholder="Факт или событие для пересмотра"></div><div class="form-group"><label>Уверенность <small>честная вероятность</small></label><div class="range-wrap"><input id="confidenceRange" type="range" min="40" max="95" value="${t.confidence}"><span class="confidence-value" id="confidenceValue">${t.confidence}%</span></div></div><div class="modal-actions"><button class="secondary-button pressable" data-action="save-thesis-draft">Сохранить версию</button><button class="primary-button pressable" data-action="review-thesis">AI Review V2 →</button></div>${t.versions.length?`<div class="form-group"><label>История версий <small>${t.versions.length}</small></label><div class="version-list">${t.versions.slice(-3).reverse().map((v,i)=>`<div class="version-item">v${t.versions.length-i} · ${new Date(v.savedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} · ${v.confidence}% confidence</div>`).join('')}</div></div>`:''}`;
   }
-
-  function answerDiagnostic(answerIndex) {
-    const question = diagnosticQuestions[diagnosticStep];
-    diagnosticAnswers.push(answerIndex === question.correct);
-    diagnosticStep += 1;
-    if (diagnosticStep < diagnosticQuestions.length) {
-      renderDiagnosticQuestion();
-      return;
-    }
-    const correct = diagnosticAnswers.filter(Boolean).length;
-    const newIQ = 6900 + correct * 360 + Math.round(Math.random() * 90);
-    state.sportsIQ = Math.max(state.sportsIQ, newIQ);
-    state.diagnosticCompleted = true;
-    saveState();
-    applyState();
-    modalTitle.textContent = 'Твой стартовый профиль';
-    modalKicker.textContent = 'DIAGNOSTIC COMPLETE';
-    modalContent.innerHTML = `
-      <div class="replay-hero"><span>SPORTS IQ</span><strong>${formatNumber(state.sportsIQ)}</strong><p>${correct}/5 сильных решений. Лучший сигнал — понимание разницы между результатом и качеством логики.</p></div>
-      <div class="review-card success"><h3>Сильная сторона</h3><p>Tactical reasoning: ты не путаешь владение с реальным контролем.</p></div>
-      <div class="review-card warning"><h3>Первая зона развития</h3><p>Confidence calibration: чаще снижай уверенность, когда важные данные ещё неизвестны.</p></div>
-      <div class="modal-actions one"><button class="primary-button pressable" data-action="close-modal">Перейти в NOVIQ</button></div>`;
+  function bindThesisForm(t){
+    modalContent.dataset.mode=t.mode;modalContent.dataset.outcome=t.outcome;modalContent.dataset.sources=JSON.stringify(t.sources||[]);
+    $('#confidenceRange',modalContent).addEventListener('input',e=>$('#confidenceValue',modalContent).textContent=`${e.target.value}%`);
   }
-
-  function openAICore() {
-    openModal({
-      kicker: 'AI CORE',
-      title: 'Спроси NOVIQ',
-      html: `
-        <div class="ai-orb-large"><b>✦</b></div>
-        <p class="modal-copy" style="text-align:center">AI не заменяет твоё решение. Он находит пробелы, альтернативные сценарии и повторяющиеся ошибки.</p>
-        <div class="ai-suggestions">
-          <button class="ai-suggestion pressable" data-action="use-ai-suggestion">Где слабое место Madrid?</button>
-          <button class="ai-suggestion pressable" data-action="use-ai-suggestion">Проверь мою уверенность</button>
-          <button class="ai-suggestion pressable" data-action="use-ai-suggestion">Покажи старую похожую ошибку</button>
-        </div>
-        <textarea class="textarea" id="aiQuestion" placeholder="Спроси о тактике, рисках, данных или своей Sports Memory..."></textarea>
-        <div class="modal-actions one"><button class="primary-button pressable" data-action="ask-ai">Анализировать →</button></div>
-        <div id="aiAnswer"></div>`
-    });
+  function collectThesis(){
+    const mode=modalContent.dataset.mode||'expert'; let sources=[];try{sources=JSON.parse(modalContent.dataset.sources||'[]')}catch{}
+    return {...(state.thesis||thesisDefault()),mode,outcome:modalContent.dataset.outcome||'mci',sources,scenario:$('#thesisScenario',modalContent)?.value.trim()||'',reason:$('#thesisReason',modalContent)?.value.trim()||'',secondaryReason:$('#secondaryReason',modalContent)?.value.trim()||'',keyPlayer:$('#keyPlayer',modalContent)?.value.trim()||'',risk:$('#thesisRisk',modalContent)?.value.trim()||'',alternative:$('#alternative',modalContent)?.value.trim()||'',changeMind:$('#changeMind',modalContent)?.value.trim()||'',confidence:Number($('#confidenceRange',modalContent)?.value||68),updatedAt:new Date().toISOString(),locked:false};
   }
-
-  function askAI() {
-    const input = qs('#aiQuestion', modalContent);
-    const question = input.value.trim();
-    if (question.length < 4) { showToast('Сформулируй вопрос подробнее'); return; }
-    const answer = qs('#aiAnswer', modalContent);
-    answer.innerHTML = `<div class="review-card purple" style="margin-top:12px"><h3>NOVIQ is analyzing…</h3><p>Сопоставляю вопрос с AI Briefing и твоей Sports Memory.</p></div>`;
-    setTimeout(() => {
-      answer.innerHTML = `<div class="review-card success" style="margin-top:12px"><h3>NOVIQ AI</h3><p>Ключевой риск — не само владение City, а качество первой передачи после отбора Madrid. Твоя история показывает, что ты иногда переоцениваешь стартовый состав и недооцениваешь календарную нагрузку. Проверь оба фактора до фиксации Thesis.</p></div><div class="info-card"><h3>Что наблюдать</h3><p>Позицию крайних защитников City, расстояние между линиями после потери и готовность Madrid атаковать свободный полуфланг.</p></div>`;
-    }, 650);
+  function saveThesisDraft(){ const t=collectThesis(); t.versions=[...(t.versions||[]),{savedAt:new Date().toISOString(),scenario:t.scenario,reason:t.reason,risk:t.risk,alternative:t.alternative,confidence:t.confidence}]; state.thesis=t;save();applyState();toast(`Версия v${t.versions.length} сохранена`);openThesis(); }
+  function reviewThesis(){
+    const t=collectThesis(); const missing=[]; if(t.scenario.length<25)missing.push('сценарий');if(t.reason.length<25)missing.push('причину');if(t.risk.length<8)missing.push('риск');if(t.alternative.length<8)missing.push('альтернативу');if(t.changeMind.length<8)missing.push('условие пересмотра');if(!t.sources.length)missing.push('источники');if(t.mode==='expert'&&t.secondaryReason.length<12)missing.push('второй аргумент');
+    if(missing.length){toast(`Добавь: ${missing.join(', ')}`);return;}
+    const review=buildReview(t); t.review=review; state.thesis=t;save();applyState();
+    modalTitle.textContent='AI Thesis Review V2';modalKicker.textContent='BEFORE THE MATCH';modalContent.innerHTML=reviewHtml(t,review);
   }
-
-  function openLanguage() {
-    openModal({
-      kicker: 'LOCALIZATION',
-      title: 'Язык приложения',
-      html: `<p class="modal-copy">Язык меняется сразу и не требует выхода из приложения.</p><div class="language-grid">
-        ${languageOption('ru', 'Русский', 'Russian')}${languageOption('ua', 'Українська', 'Ukrainian')}${languageOption('en', 'English', 'English')}
-      </div>`
-    });
+  function buildReview(t){
+    const specificity=Math.min(96,52+Math.round((t.scenario.length+t.reason.length+t.secondaryReason.length)/11)+t.sources.length*3);
+    const causality=Math.min(94,58+(t.reason.includes('потому')||t.reason.includes('из-за')||t.reason.includes('because')?10:0)+(t.secondaryReason?12:0)+Math.min(14,Math.round(t.reason.length/14)));
+    const risk=Math.min(96,50+Math.min(24,t.risk.length)+Math.min(14,t.alternative.length)+Math.min(10,t.changeMind.length));
+    const evidence=Math.min(94,45+t.sources.length*10+(t.keyPlayer?8:0)+(t.secondaryReason?7:0));
+    const over=t.confidence>78; const under=t.confidence<52; const bias=[];
+    if(/последн|форма|серия|recent|streak/i.test(t.reason))bias.push('Recency bias possible');
+    if(t.outcome==='mci'&&/сильн|лучше|класс/i.test(t.reason)&&t.risk.length<15)bias.push('Favorite bias possible');
+    if(t.sources.length===1)bias.push('Single-source dependence');
+    if(!bias.length)bias.push('No strong cognitive bias detected');
+    return {specificity,causality,risk,evidence,confidenceNote:over?'Уверенность завышена для матча с двумя сильными сценариями.':under?'Аргументы сильнее заявленной уверенности.':'Уверенность находится в разумном диапазоне.',bias,overall:Math.round((specificity+causality+risk+evidence)/4)};
   }
+  function reviewHtml(t,r){return `<div class="review-score-grid">${[['Specificity',r.specificity],['Causality',r.causality],['Risk quality',r.risk],['Evidence',r.evidence]].map(([l,v])=>`<div class="review-score"><span>${l}</span><b>${v}</b></div>`).join('')}</div><div class="review-card success"><h3>Сильная сторона · ${r.overall}/100</h3><p>Ты сформулировал проверяемый сценарий и указал, что способно его разрушить.</p></div><div class="review-card warning"><h3>Bias scan</h3><p>${r.bias.join(' · ')}</p></div><div class="review-card purple"><h3>Confidence Check · ${t.confidence}%</h3><p>${r.confidenceNote}</p></div><div class="info-card"><h3>Missing context</h3><p>${t.sources.includes('lineups')?'Составы учтены.':'Стартовые составы пока не отмечены как источник.'} Проверь свежесть данных и календарную нагрузку.</p></div><div class="info-card"><h3>Alternative scenario</h3><p>${escapeHtml(t.alternative)}</p></div><div class="info-card"><h3>Вопрос NOVIQ</h3><p>Как именно событие «${escapeHtml(t.changeMind)}» изменит твою уверенность и итоговый сценарий?</p></div><div class="modal-actions"><button class="secondary-button pressable" data-action="edit-thesis">Улучшить Thesis</button><button class="primary-button pressable" data-action="lock-thesis">Зафиксировать →</button></div>`;}
+  function lockThesis(){ if(!state.thesis?.review){toast('Сначала пройди AI Review');return;} state.thesis={...state.thesis,locked:true,lockedAt:new Date().toISOString()};state.sportsIQ+=6;state.skills.decision=Math.min(0.98,state.skills.decision+0.005);if(state.thesis.alternative){state.mission.progress=1;state.mission.completed=true;}save();applyState();modalTitle.textContent='Thesis зафиксирован';modalKicker.textContent='DECISION LOCK';modalContent.innerHTML=lockedThesisHtml(state.thesis);toast('Decision timestamp сохранён'); }
+  function lockedThesisHtml(t){const outcome=t.outcome==='mci'?'Manchester City':t.outcome==='rma'?'Real Madrid':'Ничья';return `<div class="review-card success"><h3 class="locked-badge">● DECISION LOCKED</h3><p>${new Date(t.lockedAt||t.updatedAt).toLocaleString()}</p></div><div class="info-card"><h3>${outcome} · ${t.confidence}%</h3><p>${escapeHtml(t.scenario)}</p></div><div class="info-card"><h3>Key logic</h3><p>${escapeHtml(t.reason)}</p></div><div class="info-card"><h3>Risk / alternative</h3><p>${escapeHtml(t.risk)} · ${escapeHtml(t.alternative)}</p></div><div class="review-score-grid"><div class="review-score"><span>Review score</span><b>${t.review?.overall||'—'}</b></div><div class="review-score"><span>Versions</span><b>${t.versions?.length||0}</b></div></div><div class="modal-actions one"><button class="primary-button pressable" data-action="open-replay">Открыть demo Decision Replay V2</button></div>`;}
 
-  function languageOption(code, label, sub) {
-    return `<button class="language-option pressable ${state.language === code ? 'selected' : ''}" data-action="set-language" data-language="${code}"><span><b>${label}</b><small>${sub}</small></span><i>${state.language === code ? '✓' : '›'}</i></button>`;
+  function openBriefing(){openModal({title:'AI Briefing',kicker:'FACTS · SIGNALS · UNKNOWNS',html:`<div class="review-card success"><h3>Подтверждённые факты</h3><p>City чаще контролирует территорию через позиционные перегрузки. Madrid сохраняет высокую угрозу после отбора.</p></div><div class="info-card"><h3>Аналитический вывод</h3><p>Ключевой конфликт — способность City защищать пространство за центральной линией после потери.</p></div><div class="review-card warning"><h3>Неизвестные факторы</h3><p>Стартовые составы, роль опорного полузащитника и уровень ротации.</p></div><div class="info-card"><h3>Что наблюдать в первые 15 минут</h3><p>Высоту крайних защитников City и направление первой передачи Madrid после отбора.</p></div><div class="modal-actions one"><button class="primary-button pressable" data-action="open-thesis">Создать Match Thesis V2 →</button></div>`});}
+  function openReplay(){
+    openModal({title:'Inter 2–1 Bayern',kicker:'DECISION REPLAY V2',html:`<div class="replay-hero"><span>OVERALL DECISION SCORE</span><strong>82</strong><p>Ты не угадал точный счёт, но правильно определил характер матча и главный тактический конфликт.</p></div><div class="score-breakdown">${scoreRow('Thesis Quality',88)}${scoreRow('Tactical IQ',91)}${scoreRow('Context IQ',76)}${scoreRow('Data Usage',74)}${scoreRow('Risk Management',72)}${scoreRow('Calibration',69)}</div><div class="timeline"><div class="timeline-item"><b>0′ · Исходная гипотеза</b><p>Inter вынуждает Bayern атаковать шире и получает пространство для вертикальных выходов.</p></div><div class="timeline-item"><b>23′ · Thesis confirmed</b><p>Bayern теряет структуру после продвижения крайних защитников.</p></div><div class="timeline-item"><b>51′ · Blind spot exposed</b><p>Стандарт создаёт момент, который не был учтён в рисках.</p></div><div class="timeline-item"><b>78′ · Decisive moment</b><p>Inter реализует переход после центральной потери.</p></div></div><div class="replay-card"><h3>Можно ли было предусмотреть?</h3><p>Переходы — да. Конкретный стандарт — нет, но его тип риска можно было назвать заранее.</p></div><div class="review-card warning"><h3>Calibration gap</h3><p>Ты поставил 81%, тогда как аргументы и неизвестные соответствовали диапазону 65–70%.</p></div><div class="form-group"><label for="replayReflection">Что ты понял после матча? <small>обязательно для Learning IQ</small></label><textarea class="textarea" id="replayReflection" placeholder="Сформулируй правило, которое применишь в следующем матче..."></textarea></div><div class="modal-actions one"><button class="primary-button pressable" data-action="complete-replay">Сохранить урок и обновить Sports IQ</button></div>`});
   }
+  function scoreRow(l,v){return `<div class="score-row"><span>${l}</span><i><b style="width:${v}%"></b></i><b>${v}</b></div>`;}
+  function completeReplay(){const reflection=$('#replayReflection',modalContent)?.value.trim()||'';if(reflection.length<18){toast('Сформулируй конкретный урок');return;}const d=state.decisions.find(x=>x.id==='int-bay');if(d&&!d.completed){d.completed=true;d.lesson=reflection;state.sportsIQ+=24;state.skills.learning=Math.min(0.98,state.skills.learning+0.018);state.skills.decision=Math.min(0.98,state.skills.decision+0.01);state.calibration.score=Math.min(100,state.calibration.score+2);state.calibration.history.push(state.calibration.score);state.completedLoops++;const p=state.patterns.find(x=>x.id==='playoff-uncertainty');p.evidence.unshift('Inter—Bayern · lesson applied');}save();applyState();modalTitle.textContent='Learning Loop активирован';modalKicker.textContent='SPORTS MEMORY UPDATED';modalContent.innerHTML=`<div class="review-card success"><h3>+24 Sports IQ</h3><p>Урок сохранён как проверяемое правило, а не общая фраза.</p></div><div class="info-card"><h3>Новое правило</h3><p>${escapeHtml(reflection)}</p></div><div class="info-card"><h3>Следующий похожий матч</h3><p>PSG — Liverpool: равный матч с высокой переходной угрозой и неопределённостью состава.</p></div><div class="modal-actions one"><button class="primary-button pressable" data-action="open-lesson">Пройти контрольный урок →</button></div>`;}
 
-  function setLanguage(language) {
-    state.language = language;
-    saveState();
-    applyState();
-    openLanguage();
-    showToast(language === 'ru' ? 'Язык: Русский' : language === 'ua' ? 'Мова: Українська' : 'Language: English');
-  }
+  function openCalibration(){openModal({title:'Confidence Lab',kicker:'CALIBRATION V2',html:`<p class="modal-copy">Калибровка отвечает на вопрос: когда ты говоришь «70%», подтверждается ли это примерно в 7 из 10 похожих решений?</p><div class="replay-hero"><span>CALIBRATION SCORE</span><strong>${state.calibration.score}%</strong><p>Сильный диапазон: 60–69%. Основной риск: переуверенность выше 80%.</p></div><div class="calibration-grid">${state.calibration.bins.map(b=>`<div class="calibration-bin"><span>${b.label}</span><i style="--actual:${b.actual}%"></i><b>${b.actual}%</b></div>`).join('')}</div><div class="review-card warning" style="margin-top:14px"><h3>Overconfidence zone</h3><p>В решениях с заявленной уверенностью 80–89% фактическая успешность составляет 68%.</p></div><div class="info-card"><h3>Рекомендация</h3><p>При неизвестном составе начинай с диапазона 60–70% и повышай его только после подтверждения ключевого условия.</p></div>`});}
+  function openMission(){openModal({title:state.mission.title,kicker:'PERSONAL MISSION',html:`<p class="modal-copy">Миссия выбрана из повторяющегося паттерна и должна быть выполнена внутри реального решения.</p><div class="mission-big-progress"><i style="--progress:${state.mission.progress/state.mission.target*100}%"></i></div><div class="review-score-grid"><div class="review-score"><span>Progress</span><b>${state.mission.progress}/${state.mission.target}</b></div><div class="review-score"><span>Reward</span><b>+12 IQ</b></div></div><div class="info-card"><h3>Условие выполнения</h3><p>${state.mission.copy}</p></div><div class="info-card"><h3>Почему это важно</h3><p>Альтернативный сценарий уменьшает tunnel vision и улучшает калибровку при равных матчах.</p></div><div class="modal-actions one"><button class="primary-button pressable" data-action="open-thesis">Применить в Thesis →</button></div>`});}
+  function openLesson(){openModal({title:'Контроль мяча ≠ контроль матча',kicker:'LEARNING LOOP · 4 MIN',html:`<p class="modal-copy">Владение показывает, у кого мяч. Контроль матча требует оценки территории, качества продвижения, угрозы после потерь и способности навязывать выгодный сценарий.</p><div class="info-card"><h3>Пример</h3><p>Команда может владеть 68%, но создавать мало моментов и постоянно отдавать сопернику опасные переходы.</p></div><div class="lesson-quiz"><h3 style="font-size:13px">Контрольный вопрос</h3><button class="quiz-option" data-action="answer-lesson" data-correct="false">Команда с большим владением всегда контролирует матч</button><button class="quiz-option" data-action="answer-lesson" data-correct="true">Нужно проверить продвижение, территорию и переходы</button><button class="quiz-option" data-action="answer-lesson" data-correct="false">Достаточно сравнить число ударов</button></div><div id="lessonFeedback"></div>`});}
+  function answerLesson(btn){const ok=btn.dataset.correct==='true';$$('.quiz-option',modalContent).forEach(b=>b.disabled=true);$('#lessonFeedback',modalContent).innerHTML=`<div class="review-card ${ok?'success':'warning'}" style="margin-top:10px"><h3>${ok?'Верно':'Нужно пересмотреть'}</h3><p>${ok?'Ты отделил владение от качества контроля. Урок сохранён в Sports Memory.':'Контроль требует нескольких независимых сигналов.'}</p></div>${ok?'<div class="modal-actions one"><button class="primary-button" data-action="complete-lesson">Сохранить урок</button></div>':''}`;}
+  function completeLesson(){if(!state.lessonsCompleted.includes('possession-control')){state.lessonsCompleted.push('possession-control');state.sportsIQ+=8;state.skills.learning=Math.min(0.98,state.skills.learning+0.007);save();applyState();}closeModal();toast('+8 Sports IQ · урок сохранён');}
 
-  function openNotificationsSettings() {
-    openModal({
-      kicker: 'NOTIFICATION INTELLIGENCE',
-      title: 'Умные уведомления',
-      html: `<p class="modal-copy">NOVIQ не отправляет шум. Только события, влияющие на твой анализ.</p>
-        ${notificationToggle('briefings', 'AI Briefing готов', 'Перед выбранными матчами')}
-        ${notificationToggle('lineups', 'Опубликованы составы', 'Только когда это влияет на Thesis')}
-        ${notificationToggle('replay', 'Decision Replay доступен', 'После завершения матча')}
-        ${notificationToggle('weekly', 'Weekly Intelligence', 'Один отчёт в неделю')}`
-    });
-  }
+  function openPattern(id){const p=state.patterns.find(x=>x.id===id);if(!p)return;openModal({title:p.title,kicker:'SPORTS MEMORY V2',html:`<div class="review-card ${p.severity==='strength'?'success':'warning'}"><h3>${p.skill}</h3><p>${p.summary}</p></div><div class="info-card"><h3>Доказательства</h3><div class="evidence-row">${p.evidence.map(e=>`<i>${escapeHtml(e)}</i>`).join('')}</div></div><div class="info-card"><h3>Как NOVIQ использует паттерн</h3><p>Он влияет на персональные миссии, выбор матчей и вопросы AI Review. Один матч никогда не создаёт устойчивый вывод.</p></div><div class="modal-actions"><button class="secondary-button" data-action="dispute-pattern" data-pattern="${p.id}">Оспорить вывод</button><button class="primary-button" data-action="open-mission">Открыть миссию</button></div>`});}
+  function openSkill(key){openModal({title:skillLabel(key),kicker:'SKILL EVIDENCE',html:`<div class="replay-hero"><span>${skillLabel(key).toUpperCase()}</span><strong>${Math.round(state.skills[key]*100)}</strong><p>Уровень доверия к оценке: ${state.skillTrust[key]}%.</p></div><div class="info-card"><h3>Что измеряется</h3><p>${skillDescription(key)}.</p></div><div class="info-card"><h3>Последнее доказательство</h3><p>Inter — Bayern: решение оценено через Thesis Quality, фактический сценарий и постматчевый урок.</p></div><div class="review-card warning"><h3>Ограничение</h3><p>Нужно больше решений в разных турнирах, чтобы подтвердить устойчивость навыка.</p></div>`});}
+  function openDecision(id){if(id==='current-thesis'){openThesis();return;}if(id==='int-bay'){openReplay();return;}const d=state.decisions.find(x=>x.id===id);openModal({title:d?.match||'Decision',kicker:'DECISION HISTORY',html:`<div class="replay-hero"><span>DECISION SCORE</span><strong>${d?.score||'—'}</strong><p>${escapeHtml(d?.lesson||'No lesson')}</p></div><div class="info-card"><h3>Archived replay</h3><p>Исторический Decision Replay сохранён в локальной демо-памяти.</p></div>`});}
+  function openMatchCard(id){const m=matches.find(x=>x.id===id);if(!m)return;openModal({title:`${m.home} — ${m.away}`,kicker:`${m.tournament} · INTELLIGENCE ${m.intelligence}`,html:`<div class="match-main"><div class="team"><span class="crest">${m.hc}</span><b>${m.home}</b></div><div class="match-center"><b>${m.score||m.time}</b><small>${m.score?m.time:'Today'}</small></div><div class="team"><span class="crest">${m.ac}</span><b>${m.away}</b></div></div><div class="info-card"><h3>Почему матч выбран</h3><p>Он проверяет твой навык управления риском и паттерн переоценки сильного состава.</p></div><div class="action-row"><button class="secondary-button" data-action="open-briefing">AI Briefing</button><button class="primary-button" data-action="${m.id==='int-bay'?'open-replay':'open-thesis'}">${m.id==='int-bay'?'Decision Replay':'Create Thesis'}</button></div>`});}
 
-  function notificationToggle(key, title, text) {
-    const enabled = state.notifications[key];
-    return `<div class="toggle-row"><span class="toggle-copy"><b>${title}</b><small>${text}</small></span><button class="switch pressable ${enabled ? 'on' : ''}" data-action="toggle-notification" data-key="${key}" aria-pressed="${enabled}"><i></i></button></div>`;
-  }
+  function openAICore(){openModal({title:'Спроси NOVIQ',kicker:'AI CORE · DEMO',html:`<div class="ai-orb-large"><b>✦</b></div><p class="modal-copy" style="text-align:center">AI не заменяет решение. Он ищет пробелы, противоречия, альтернативные сценарии и похожие ошибки.</p><div class="ai-suggestions"><button class="ai-suggestion" data-action="use-ai-suggestion">Где слабое место Madrid?</button><button class="ai-suggestion" data-action="use-ai-suggestion">Проверь мою уверенность</button><button class="ai-suggestion" data-action="use-ai-suggestion">Покажи похожую ошибку</button></div><textarea class="textarea" id="aiQuestion" placeholder="Спроси о тактике, рисках, данных или Sports Memory..."></textarea><div class="modal-actions one"><button class="primary-button" data-action="ask-ai">Анализировать →</button></div><div id="aiAnswer"></div>`});}
+  function askAI(){const q=$('#aiQuestion',modalContent)?.value.trim()||'';if(q.length<4){toast('Сформулируй вопрос подробнее');return;}$('#aiAnswer',modalContent).innerHTML='<div class="review-card purple" style="margin-top:10px"><h3>NOVIQ analyzing…</h3><p>Сопоставляю вопрос с Briefing, Thesis и Sports Memory.</p></div>';setTimeout(()=>{const text=/увер|confidence/i.test(q)?`Твоя текущая калибровка ${state.calibration.score}%. Главная проблема — диапазон выше 80%. До публикации составов разумнее удерживать 60–70%.`:/ошиб|похож/i.test(q)?'Похожая ошибка была в Inter — Bayern: сильный тактический сценарий, но недооценён риск стандартов и завышена уверенность.':'Ключевой риск Madrid — пространство за крайними защитниками соперника после потери. Смотри не только на владение, а на качество первой передачи после отбора.';$('#aiAnswer',modalContent).innerHTML=`<div class="review-card success" style="margin-top:10px"><h3>NOVIQ AI</h3><p>${text}</p></div><div class="info-card"><h3>Уровень уверенности</h3><p>Demo inference · средний. Реальный серверный AI и источники будут подключены в следующем техническом этапе.</p></div>`;},650);}
 
-  function toggleNotification(key) {
-    state.notifications[key] = !state.notifications[key];
-    saveState();
-    openNotificationsSettings();
-  }
+  function openNotifications(){openModal({title:'Уведомления',kicker:'NOTIFICATION INTELLIGENCE',html:`<p class="modal-copy">NOVIQ уведомляет только тогда, когда изменилась ценность решения.</p>${Object.entries(state.notifications).map(([k,v])=>`<button class="setting-row" data-action="toggle-notification" data-notification="${k}"><span class="setting-icon">${v?'●':'○'}</span><span><b>${({briefings:'AI Briefing',lineups:'Стартовые составы',replay:'Decision Replay',weekly:'Weekly Report',patterns:'Новый паттерн'})[k]}</b><small>${v?'Включено':'Выключено'}</small></span><i>›</i></button>`).join('')}`});}
+  function changeLanguage(){openModal({title:'Язык',kicker:'LOCALIZATION',html:`<div class="option-grid">${[['ru','Русский'],['ua','Українська'],['en','English']].map(([v,l])=>`<button class="option-button ${state.language===v?'selected':''}" data-action="set-language" data-language="${v}">${l}</button>`).join('')}</div><div class="info-card" style="margin-top:12px"><h3>Language behavior</h3><p>Основная навигация локализована. Часть демонстрационного аналитического контента остаётся на русском до подключения серверной локализации.</p></div>`});}
+  function toggleTheme(){state.theme=state.theme==='dark'?'light':'dark';save();applyState();toast(state.theme==='dark'?'Dark Elite активирован':'Light Elite активирован');}
+  function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`noviq-1.1-export-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500);toast('Экспорт подготовлен');}
+  function resetDemo(){openModal({title:'Сбросить локальный прогресс?',kicker:'DATA CONTROL',html:`<div class="review-card warning"><h3>Будут удалены</h3><p>Диагностика, Thesis, Replay, миссии, настройки и Sports Memory, сохранённые на этом устройстве.</p></div><div class="modal-actions"><button class="secondary-button" data-action="close-modal">Отмена</button><button class="primary-button" data-action="confirm-reset">Сбросить</button></div>`});}
+  function openLoopMap(){openModal({title:'Intelligence Loop',kicker:'HOW NOVIQ WORKS',html:`${[['1','Diagnostic','Измеряет стартовый профиль и уверенность.'],['2','AI Briefing','Разделяет факты, сигналы и неизвестные.'],['3','Match Thesis','Фиксирует сценарий, аргументы, риск и уверенность.'],['4','AI Review','Проверяет причинность, bias и blind spots.'],['5','Decision Replay','Сравнивает ожидание с реальным матчем.'],['6','Learning Loop','Сохраняет правило и обновляет Sports Memory.']].map(x=>`<div class="info-card"><h3>${x[0]}. ${x[1]}</h3><p>${x[2]}</p></div>`).join('')}`});}
+  function openIQMethod(){openModal({title:'Методология Sports IQ V2',kicker:'TRANSPARENCY',html:`<div class="info-card"><h3>Что повышает рейтинг</h3><p>Качество причинности, сложность матча, использование независимых данных, управление риском, калибровка и конкретный постматчевый урок.</p></div><div class="info-card"><h3>Что почти не влияет</h3><p>Количество открытий приложения, случайно угаданный результат, лайки и бессодержательные действия.</p></div><div class="review-card warning"><h3>Уровень доверия</h3><p>Каждый поднавык показывает evidence confidence. Рейтинг не считается полностью подтверждённым при малом числе решений.</p></div>`});}
 
-  function openSimple(title, kicker, body, actionLabel = 'Готово', action = 'close-modal') {
-    openModal({ kicker, title, html: `${body}<div class="modal-actions one"><button class="primary-button pressable" data-action="${action}">${actionLabel}</button></div>` });
-  }
+  function continueLoop(){const s=currentLoopStage();if(s===0)openDiagnostic();else if(s===1)openBriefing();else if(s===2||s===3)openThesis();else if(s===4)openReplay();else openLesson();}
 
-  function openMatchById(id) {
-    const match = matches.find((item) => item.id === id) || matches[0];
-    if (match.group.includes('replay')) { openReplay(); return; }
-    if (match.group.includes('live')) {
-      openSimple(`${match.home} ${match.score} ${match.away}`, 'LIVE INTELLIGENCE', `<div class="review-card purple"><h3>Твоя Thesis: активна</h3><p>Основной сценарий держится на 68%. События матча пока не разрушили ключевое предположение.</p></div><div class="info-card"><h3>Изменившийся фактор</h3><p>Левый фланг ${match.away} создаёт больше продвижений, чем ожидалось. Следи за следующими 10 минутами.</p></div>`, 'Продолжить наблюдение');
-      return;
-    }
-    if (id === 'mci-rma') { openThesis(); return; }
-    openSimple(`${match.home} — ${match.away}`, match.tournament.toUpperCase(), `<div class="info-card"><h3>Почему матч выбран</h3><p>Он подходит для развития твоего слабого навыка: оценки риска в равных матчах.</p></div><div class="review-card purple"><h3>AI Briefing</h3><p>Ожидается борьба за пространство между линиями. Ключевой неизвестный фактор — стартовая структура без мяча.</p></div>`, 'Создать Thesis', 'open-thesis');
-  }
-
-  function exportData() {
-    const data = JSON.stringify({ exportedAt: new Date().toISOString(), version: '1.0', state }, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'noviq-data.json';
-    link.click();
-    URL.revokeObjectURL(url);
-    showToast('Экспорт NOVIQ подготовлен');
-  }
-
-  function resetDemo() {
-    openModal({
-      kicker: 'DATA CONTROL',
-      title: 'Сбросить локальный прогресс?',
-      html: `<p class="modal-copy">Будут удалены Thesis, диагностический результат и локальная Sports Memory этого демо.</p><div class="modal-actions"><button class="secondary-button pressable" data-action="close-modal">Отмена</button><button class="primary-button pressable" data-action="confirm-reset">Сбросить</button></div>`
-    });
-  }
-
-  function confirmReset() {
-    state = structuredClone(defaultState);
-    saveState();
-    applyState();
-    closeModal();
-    navigate('home');
-    showToast('Демо сброшено');
-  }
-
-  function escapeHtml(value = '') {
-    return String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
-  }
-
-  function handleAction(action, target) {
-    const actions = {
-      'close-modal': closeModal,
-      'toggle-theme': toggleTheme,
-      'open-thesis': openThesis,
-      'save-thesis-draft': saveThesisDraft,
-      'review-thesis': reviewThesis,
-      'edit-thesis': openThesis,
-      'lock-thesis': lockThesis,
-      'open-demo-replay': openReplay,
-      'open-replay': openReplay,
-      'complete-replay': completeReplay,
-      'open-diagnostic': openDiagnostic,
-      'open-ai-core': openAICore,
-      'ask-ai': askAI,
-      'open-language': openLanguage,
-      'open-notification-settings': openNotificationsSettings,
-      'export-data': exportData,
-      'reset-demo': resetDemo,
-      'confirm-reset': confirmReset,
-      'open-matches': () => navigate('matches'),
-      'open-profile': () => navigate('profile'),
-      'refresh-briefing': () => showToast('AI Briefing обновлён: новых критических факторов нет'),
-      'open-match-detail': () => openSimple('Полный AI Briefing', 'MANCHESTER CITY — REAL MADRID', `<div class="info-card"><h3>Confirmed facts</h3><p>Матч демонстрационный. В production здесь будут свежие составы, травмы, форма и источник каждого факта.</p></div><div class="review-card purple"><h3>Main scenario</h3><p>City стремится закрепиться высоко, Madrid будет искать быстрые вертикальные выходы после отбора.</p></div><div class="review-card warning"><h3>Unknowns</h3><p>Стартовые составы и реальная готовность ключевых игроков пока не подтверждены.</p></div>`),
-      'open-insight': () => openSimple(target.dataset.insight === 'risk' ? 'Скрытый риск' : 'Главный сценарий', 'AI BRIEFING', target.dataset.insight === 'risk' ? `<div class="review-card warning"><h3>Риск</h3><p>Потеря в центральной зоне при высоком расположении крайних защитников открывает Madrid прямой путь к воротам.</p></div>` : `<div class="review-card purple"><h3>Сценарий</h3><p>City контролирует территорию и заставляет Madrid защищаться ниже, но качество контроля зависит от защиты после потери.</p></div>`),
-      'open-live-match': () => openMatchById('ars-bar'),
-      'open-command-center': () => openSimple('World Cup Command Center', 'WORLD CUP 2026', `<div class="review-card purple"><h3>Турнирная память</h3><p>NOVIQ будет сравнивать твои решения по этапам турнира, сборным и типам матчей.</p></div><div class="info-card"><h3>Личный турнирный режим</h3><p>Briefing → Thesis → Replay → World Cup Wrapped для каждого важного матча.</p></div>`),
-      'open-twin': () => openSimple('Sports Twin', 'YOUR THINKING MODEL', `<div class="review-card purple"><h3>Predicted blind spot</h3><p>Перед следующим матчем ты, вероятно, снова повысишь уверенность после публикации сильного состава. NOVIQ напомнит проверить нагрузку и структуру без мяча.</p></div><div class="info-card"><h3>Evidence</h3><p>6 решений, 4 повторения паттерна, среднее влияние на уверенность +11%.</p></div>`),
-      'start-mission': () => { openThesis(); showToast('Миссия активна: укажи, что изменит твоё мнение'); },
-      'open-memory': () => navigate('insights'),
-      'open-geo': () => openSimple('Geo Intelligence', 'ZHYTOMYR', `<div class="info-card"><h3>Privacy first</h3><p>Геолокация не включена автоматически. В реальной версии NOVIQ запросит отдельное согласие и объяснит пользу.</p></div><div class="review-card success"><h3>Рядом на этой неделе</h3><p>Демо: 3 матча, 2 локальных сообщества и одна встреча для совместного анализа.</p></div>`),
-      'open-community': () => openSimple('Friends Intelligence', 'COMMUNITY PULSE', `<div class="info-card"><h3>Репутация вместо лайков</h3><p>Профили сравниваются по качеству Thesis, калибровке и подтверждённым навыкам.</p></div><div class="review-card purple"><h3>Anti-copy rule</h3><p>Чужая гипотеза открывается только после фиксации собственной.</p></div>`),
-      'open-friend': () => openSimple(target.dataset.friend, 'INTELLIGENCE PROFILE', `<div class="review-card success"><h3>Verified strength</h3><p>Сильная экспертиза в Tactical IQ и матчах Лиги чемпионов.</p></div><div class="info-card"><h3>Compare</h3><p>Ты сильнее в Context IQ. ${target.dataset.friend} стабильнее калибрует уверенность.</p></div>`, 'Предложить Thesis Battle', 'start-battle'),
-      'start-battle': () => openSimple('Thesis Battle', 'FRIENDS INTELLIGENCE', `<div class="info-card"><h3>Независимый анализ</h3><p>Оба участника сначала фиксируют собственные Thesis. Затем система открывает аргументы и после матча оценивает качество решений.</p></div>`,'Выбрать матч'),
-      'open-lesson': () => openSimple('Контроль мяча ≠ контроль матча', 'MICRO LESSON · 4 MIN', `<div class="info-card"><h3>1. Продвижение</h3><p>Владение важно, только если команда регулярно продвигает мяч в опасные зоны.</p></div><div class="info-card"><h3>2. Защита после потери</h3><p>Команда может владеть мячом и одновременно оставаться уязвимой в переходах.</p></div><div class="review-card success"><h3>Проверочный вопрос</h3><p>Какая команда контролирует сценарий, если соперник добровольно отдаёт мяч, но создаёт лучшие моменты?</p></div>`),
-      'open-scenario-lab': () => openSimple('Scenario Lab', 'TRAINING MODE', `<div class="info-card"><h3>62′ · красная карточка</h3><p>Команда ведёт 1–0, но остаётся в меньшинстве. Выбери: низкий блок, сохранение прессинга или гибридная структура.</p></div><div class="review-card purple"><h3>Твоя задача</h3><p>Выбери решение, назови главный риск и укажи уверенность.</p></div>`,'Начать тренировку', 'start-scenario-training'),
-      'start-scenario-training': () => openSimple('Твоё решение', 'SCENARIO LAB · STEP 1', `<div class="form-group"><label>Выбери структуру</label><div class="option-grid"><button class="option-button selected">Низкий блок</button><button class="option-button">Гибрид</button><button class="option-button">Прессинг</button></div></div><div class="form-group"><label>Главный риск</label><textarea class="textarea" placeholder="Что может разрушить решение?"></textarea></div>`, 'Зафиксировать тренировку'),
-      'open-wrapped': () => openSimple('Weekly Intelligence', 'WEEK 31', `<div class="replay-hero"><span>SPORTS IQ CHANGE</span><strong>+64</strong><p>7 Thesis, 5 Decision Replay и одна исправленная повторяющаяся ошибка.</p></div><div class="review-card success"><h3>Лучший рост</h3><p>Tactical IQ +9% благодаря более конкретным сценариям.</p></div><div class="review-card warning"><h3>Фокус недели</h3><p>Не повышай уверенность только из-за имени клуба или сильного состава.</p></div>`),
-      'open-notifications': openNotificationsSettings,
-      'share-profile': () => navigator.share ? navigator.share({ title: 'NOVIQ Sports IQ', text: `My NOVIQ Sports IQ: ${state.sportsIQ}` }).catch(() => {}) : showToast('Ссылка на профиль скопирована'),
-      'toggle-match-filter': () => showToast('Фильтры: турнир, команда, сложность и тип навыка'),
-      'open-pattern': () => openSimple(target.dataset.pattern, 'SPORTS MEMORY EVIDENCE', `<div class="info-card"><h3>Почему NOVIQ так считает</h3><p>Вывод построен на нескольких решениях. В production пользователь увидит каждый связанный матч и сможет оспорить паттерн.</p></div>`),
-      'open-decision': () => openReplay(),
-      'open-match-card': () => openMatchById(target.dataset.matchId),
-      'answer-diagnostic': () => answerDiagnostic(Number(target.dataset.answer)),
-      'use-ai-suggestion': () => { qs('#aiQuestion', modalContent).value = target.textContent.trim(); qs('#aiQuestion', modalContent).focus(); },
-      'set-language': () => setLanguage(target.dataset.language),
-      'toggle-notification': () => toggleNotification(target.dataset.key),
-      'install-app': installApp,
-      'dismiss-install': dismissInstall
+  document.addEventListener('click',e=>{
+    const el=e.target.closest('[data-action]');if(!el)return;const a=el.dataset.action;
+    const handlers={
+      'go-home':()=>navigate('home'),'open-profile':()=>navigate('profile'),'navigate':()=>navigate(el.dataset.nav),'go-intelligence':()=>navigate('intelligence'),
+      'close-modal':closeModal,'open-diagnostic':openDiagnostic,'continue-loop':continueLoop,'open-loop-map':openLoopMap,'open-briefing':openBriefing,'open-thesis':openThesis,
+      'open-calibration':openCalibration,'open-mission':openMission,'open-replay':openReplay,'open-lesson':openLesson,'open-ai-core':openAICore,'open-notifications':openNotifications,
+      'change-language':changeLanguage,'toggle-theme':toggleTheme,'export-data':exportData,'reset-demo':resetDemo,'open-iq-method':openIQMethod,
+      'open-pattern':()=>openPattern(el.dataset.pattern),'open-skill':()=>openSkill(el.dataset.skill),'open-decision':()=>openDecision(el.dataset.decision),'open-match-card':()=>openMatchCard(el.dataset.matchId),
+      'select-diagnostic':()=>selectDiagnostic(el),'submit-diagnostic':submitDiagnostic,'save-thesis-draft':saveThesisDraft,'review-thesis':reviewThesis,'edit-thesis':openThesis,'lock-thesis':lockThesis,
+      'complete-replay':completeReplay,'answer-lesson':()=>answerLesson(el),'complete-lesson':completeLesson,'ask-ai':askAI,'use-ai-suggestion':()=>{const q=$('#aiQuestion',modalContent);if(q){q.value=el.textContent.trim();q.focus();}},
+      'toggle-notification':()=>{const k=el.dataset.notification;state.notifications[k]=!state.notifications[k];save();openNotifications();},
+      'set-language':()=>{state.language=el.dataset.language;save();applyState();closeModal();toast('Язык изменён');},
+      'confirm-reset':()=>{localStorage.removeItem(STORAGE_KEY);state=clone(defaultState);save();applyState();closeModal();toast('Локальный прогресс сброшен');},
+      'dispute-pattern':()=>toast('Отметка сохранена: паттерн будет перепроверен'),'memory-filters':()=>toast('Фильтры Sports Memory будут расширены в 1.2'),
+      'install-app':installApp,'dismiss-install':()=>{state.installDismissed=true;save();$('#installBanner').hidden=true;}
     };
-    actions[action]?.();
-  }
-
-  document.addEventListener('click', (event) => {
-    const nav = event.target.closest('[data-nav]');
-    if (nav) { navigate(nav.dataset.nav); return; }
-    const filter = event.target.closest('[data-filter]');
-    if (filter) {
-      activeFilter = filter.dataset.filter;
-      qsa('[data-filter]').forEach((item) => item.classList.toggle('active', item === filter));
-      renderMatches();
-      return;
-    }
-    const actionTarget = event.target.closest('[data-action]');
-    if (actionTarget) handleAction(actionTarget.dataset.action, actionTarget);
+    if(handlers[a])handlers[a]();
   });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && modalLayer.classList.contains('open')) closeModal();
+  document.addEventListener('click',e=>{
+    const mode=e.target.closest('[data-mode]');if(mode){modalContent.dataset.mode=mode.dataset.mode;$$('[data-mode]',modalContent).forEach(b=>b.classList.toggle('selected',b===mode));$$('.expert-only',modalContent).forEach(x=>x.hidden=mode.dataset.mode==='quick');}
+    const outcome=e.target.closest('[data-outcome]');if(outcome){modalContent.dataset.outcome=outcome.dataset.outcome;$$('[data-outcome]',modalContent).forEach(b=>b.classList.toggle('selected',b===outcome));}
+    const source=e.target.closest('[data-source]');if(source){let arr=[];try{arr=JSON.parse(modalContent.dataset.sources||'[]')}catch{};arr=arr.includes(source.dataset.source)?arr.filter(x=>x!==source.dataset.source):[...arr,source.dataset.source];modalContent.dataset.sources=JSON.stringify(arr);source.classList.toggle('selected');}
+    const filter=e.target.closest('[data-filter]');if(filter){activeFilter=filter.dataset.filter;$$('[data-filter]').forEach(b=>b.classList.toggle('active',b===filter));renderMatches();}
   });
+  document.addEventListener('input',e=>{if(e.target.id==='diagnosticConfidence')$('#diagnosticConfidenceValue',modalContent).textContent=`${e.target.value}%`;});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modalLayer.classList.contains('open'))closeModal();});
 
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    if (!state.installedPromptSeen) qs('#installBanner').hidden = false;
-  });
-
-  async function installApp() {
-    if (!deferredInstallPrompt) { showToast('На iPhone: Поделиться → На экран «Домой»'); return; }
-    deferredInstallPrompt.prompt();
-    await deferredInstallPrompt.userChoice;
-    deferredInstallPrompt = null;
-    qs('#installBanner').hidden = true;
-  }
-
-  function dismissInstall() {
-    state.installedPromptSeen = true;
-    saveState();
-    qs('#installBanner').hidden = true;
-  }
-
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
-  }
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;if(!state.installDismissed)$('#installBanner').hidden=false;});
+  async function installApp(){if(!deferredInstallPrompt){toast('На iPhone: Поделиться → На экран «Домой»');return;}deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;$('#installBanner').hidden=true;}
+  if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
   applyState();
 })();

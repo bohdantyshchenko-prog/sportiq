@@ -1,22 +1,15 @@
 {
-  "name": "NOVIQ — Sports Intelligence",
+  "name": "NOVIQ 1.1 — Sports Intelligence",
   "short_name": "NOVIQ",
-  "description": "Build, review and improve your sports thinking with Match Thesis, Decision Replay, Sports IQ and Sports Memory.",
-  "id": "./",
-  "start_url": "./",
+  "description": "Build better football decisions with Match Thesis, Decision Replay, Sports IQ and Sports Memory.",
+  "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#070910",
-  "theme_color": "#070910",
+  "background_color": "#060810",
+  "theme_color": "#060810",
   "orientation": "portrait-primary",
-  "lang": "en",
   "categories": ["sports", "education", "lifestyle"],
   "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
