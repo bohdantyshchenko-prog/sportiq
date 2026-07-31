@@ -1,16 +1,16 @@
 (() => {
   'use strict';
-  const currentKey = 'noviq-v1.1-state';
-  const legacyKey = 'noviq-v1-state';
-  if (localStorage.getItem(currentKey)) return;
-  try {
-    const legacy = JSON.parse(localStorage.getItem(legacyKey));
-    if (!legacy) return;
-    const thesisDefaults = { mode:'expert', outcome:'mci', scenario:'', reason:'', secondaryReason:'', keyPlayer:'', risk:'', alternative:'', changeMind:'', confidence:68, sources:['briefing'], customFactors:[], versions:[], locked:false, review:null };
-    const thesis = legacy.thesis ? { ...thesisDefaults, ...legacy.thesis, sources: legacy.thesis.sources || ['briefing'], versions: legacy.thesis.versions || [] } : null;
-    const decisions = Array.isArray(legacy.decisions) ? legacy.decisions.map((decision, index) => ({ id: decision.id || `legacy-${index}`, completed: decision.completed ?? true, ...decision })) : undefined;
-    localStorage.setItem(currentKey, JSON.stringify({ ...legacy, version:'1.1', thesis, ...(decisions ? { decisions } : {}) }));
-  } catch (error) {
-    console.warn('NOVIQ 1.0 migration skipped', error);
+  const N = window.NOVIQ;
+  if (localStorage.getItem(N.config.storageKey)) return;
+  for (const key of N.config.legacyKeys) {
+    try {
+      const raw=localStorage.getItem(key); if(!raw) continue;
+      const old=JSON.parse(raw); if(!old) continue;
+      const migrated={...N.util.clone(N.defaultState),...old,version:'1.2'};
+      if(old.thesis){migrated.thesis={matchId:'mci-rma',mode:'expert',outcome:'mci',scenario:'',reason:'',secondaryReason:'',risk:'',alternative:'',changeMind:'',confidence:68,sources:['briefing'],versions:[],locked:false,...old.thesis};}
+      if(Array.isArray(old.decisions))migrated.decisions=old.decisions.map((d,i)=>({id:d.id||`legacy-${i}`,match:d.match||'Legacy decision',score:d.score||'—',date:d.date||'Earlier',lesson:d.lesson||'',...d}));
+      localStorage.setItem(N.config.storageKey,JSON.stringify(migrated));
+      break;
+    } catch(error){console.warn('NOVIQ migration skipped',key,error);}
   }
 })();
