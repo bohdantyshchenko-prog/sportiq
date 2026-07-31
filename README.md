@@ -1,39 +1,38 @@
-# NOVIQ 1.1 — First Intelligence Loop
+# NOVIQ 1.2 — Live Intelligence & Retention
 
-NOVIQ is a mobile-first Sports Intelligence product that helps a fan build, review, remember and improve football decisions.
+NOVIQ develops football reasoning through one measurable loop:
 
-## Core loop
+**Dynamic Briefing → Match Thesis → Decision Lock → Live Tracking → Decision Replay → Sports IQ → Sports Memory → Recommendation**
 
-**Adaptive Diagnostic → AI Briefing → Match Thesis V2 → AI Review V2 → Decision Replay V2 → Learning Loop → Sports Memory V2**
+## Interactive in 1.2
 
-## What is interactive in 1.1
+- personal Daily Intelligence Brief
+- personal Match Center with date, search and purpose filters
+- Dynamic AI Briefing with facts, signals and unknowns
+- Match Thesis V2 with Quick/Expert modes, sources, risk, alternatives and confidence
+- immutable Decision Lock
+- Live Thesis Tracking with separate private notes
+- Decision Replay V2 and required reflection
+- Confidence Lab V2
+- Sports Memory V3 with evidence
+- Recommendation Engine V1
+- Weekly Intelligence Report V2
+- account-ready and sports-provider-ready architecture
+- Dark Elite / Light Elite, RU / UA / EN navigation
+- PWA install, offline shell, local migration and JSON export
 
-- 10-step adaptive Sports IQ diagnostic with confidence input
-- five skill scores and evidence-confidence levels
-- Match Thesis V2 with Quick/Expert modes, sources, versions, risk, alternative scenario and falsification trigger
-- AI Thesis Review V2 with specificity, causality, evidence, risk and bias checks
-- immutable Decision Lock with timestamp
-- Decision Replay V2 with timeline, score breakdown and required reflection
-- Confidence Lab and calibration ranges
-- personal missions, lessons and control questions
-- Sports Memory V2 with evidence-backed patterns
-- Match Center filters, AI Core demo, notifications, RU/UA/EN and Dark/Light Elite
-- local persistence, JSON export, PWA install and offline shell
+## Truthful product status
 
-## Important product status
-
-This is a functional front-end prototype. Sports data, AI answers, live events, friends and cloud accounts are demo/local implementations. Real data providers, server-side AI, authentication and sync are not yet connected.
+This repository is a functional front-end prototype. Matches, live events and AI outputs are explicitly marked as demo data. Real sports feeds, server AI, cloud accounts and push notifications require backend configuration and external service credentials.
 
 ## Run locally
-
-Serve the folder with any static server, for example:
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then open `http://localhost:8080`.
+Open `http://localhost:8080`.
 
-## Public build
+## Deploy
 
-GitHub Pages deploys automatically from `main` using `.github/workflows/pages.yml`.
+GitHub Pages deploys automatically from `main` through `.github/workflows/pages.yml` after Pages is configured to use **GitHub Actions**.
