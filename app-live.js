@@ -1,9 +1,56 @@
+window.NOVIQ = window.NOVIQ || {};
 (() => {
   'use strict';
-  const N=window.NOVIQ,$=N.$;
-  N.openBriefing=async id=>{const matchId=id||N.ui.activeMatch||'mci-rma';const m=N.matches.find(x=>x.id===matchId)||N.matches[0];N.ui.activeMatch=matchId;N.openModal({title:`AI Briefing · ${m.home} — ${m.away}`,kicker:'DYNAMIC BRIEFING · DEMO GATEWAY',html:'<div class="loading-card"><i></i><b>Собираю факты, сигналы и неизвестные…</b></div>'});const b=await N.ai.briefing(m);N.openModal({title:`AI Briefing · ${m.home} — ${m.away}`,kicker:'FACTS · SIGNALS · UNKNOWNS',html:`<div class="truth-banner"><b>Demo sports feed</b><p>Факты и события ниже не являются реальной live-лентой. Интеграционный слой подготовлен, внешний API не подключён.</p></div><div class="briefing-section"><span class="eyebrow">CONFIRMED FACTS</span>${b.facts.map(x=>`<div class="briefing-row fact"><i>✓</i><p>${x}</p></div>`).join('')}</div><div class="briefing-section"><span class="eyebrow">ANALYTICAL SIGNALS</span>${b.signals.map(x=>`<div class="briefing-row signal"><i>◇</i><p>${x}</p></div>`).join('')}</div><div class="briefing-section"><span class="eyebrow">UNKNOWNS</span>${b.unknowns.map(x=>`<div class="briefing-row unknown"><i>?</i><p>${x}</p></div>`).join('')}</div><div class="review-card warning"><h3>Confidence instruction</h3><p>${b.change}</p></div><div class="modal-actions"><button class="secondary-button" data-action="open-data-status">Источники</button><button class="primary-button" data-action="open-thesis" data-match-id="${matchId}">Создать Thesis →</button></div>`});};
-  N.openLive=id=>{const matchId=id||'ars-bar';const m=N.matches.find(x=>x.id===matchId)||N.matches.find(x=>x.id==='ars-bar');N.ui.activeMatch=matchId;const locked=N.state.thesis?.locked&&N.state.thesis.matchId===matchId;N.openModal({title:`Live Intelligence · ${m.home} ${m.score||''} ${m.away}`,kicker:`${m.status} · DEMO TIMELINE`,html:`<div class="truth-banner"><b>Simulation mode</b><p>Live-события демонстрационные. Исходный Thesis никогда не изменяется; заметки сохраняются отдельно.</p></div><div class="live-thesis-status"><span>THESIS STATUS</span><b>${locked?'ACTIVE':'DEMO THESIS'}</b></div><div class="live-meter"><i style="--progress:72%"></i></div><div class="live-timeline"><div class="timeline-event positive"><time>12′</time><span><b>Аргумент подтверждается</b><p>Команда регулярно получает пространство в правом полуфланге.</p></span></div><div class="timeline-event"><time>31′</time><span><b>Структура стабильна</b><p>Владение само по себе не увеличило качество моментов.</p></span></div><div class="timeline-event warning"><time>58′</time><span><b>Риск вырос</b><p>Замена защитника увеличила уязвимость после потерь.</p></span></div><div class="timeline-event active"><time>67′</time><span><b>Live question</b><p>Достаточно ли вырос риск, чтобы снизить текущую оценку сценария?</p></span></div></div><div class="form-group"><label>Приватная live-заметка</label><textarea class="textarea" id="liveNote" placeholder="Что изменилось и почему?"></textarea></div><div class="modal-actions"><button class="secondary-button" data-action="save-live-note" data-match-id="${matchId}">Сохранить заметку</button><button class="primary-button" data-action="open-replay" data-match-id="${matchId}">Demo Replay →</button></div>`});};
-  N.saveLiveNote=id=>{const text=$('#liveNote')?.value.trim();if(!text){N.toast('Добавь наблюдение');return;}N.state.liveNotes.unshift({id:`note-${Date.now()}`,matchId:id||N.ui.activeMatch,text,at:N.util.now()});N.save();N.toast('Live-наблюдение сохранено отдельно от Thesis');};
-  N.openReplay=id=>{const matchId=id||'int-bay';const m=N.matches.find(x=>x.id===matchId)||N.matches.find(x=>x.id==='int-bay');N.ui.activeMatch=matchId;N.openModal({title:`Decision Replay V2 · ${m.home} ${m.score||'2–1'} ${m.away}`,kicker:'EXPECTATION VS REALITY',html:`<div class="replay-hero"><span>OVERALL DECISION SCORE</span><strong>82</strong><p>Точный счёт не был главным. Сценарий и тактический конфликт определены сильнее, чем риск и уверенность.</p></div><div class="score-breakdown">${N.scoreRow('Thesis Quality',88)}${N.scoreRow('Tactical IQ',91)}${N.scoreRow('Context IQ',76)}${N.scoreRow('Data IQ',79)}${N.scoreRow('Risk Management',72)}${N.scoreRow('Calibration',69)}</div><div class="replay-timeline"><div><time>PRE</time><b>Ожидание</b><p>Inter получит пространство для вертикальных выходов.</p></div><div><time>18′</time><b>Подтверждение</b><p>Bayern оставлял зоны после продвижения фулбеков.</p></div><div><time>54′</time><b>Пропущенный фактор</b><p>Стандарты оказались важнее, чем было заложено в Thesis.</p></div><div><time>FT</time><b>Вывод</b><p>Логика сильная, уверенность 81% была завышена.</p></div></div><div class="split-result"><div class="review-card success"><h3>Foreseeable</h3><p>Переходы, ширина Bayern, свободные зоны.</p></div><div class="review-card purple"><h3>Random / low predictability</h3><p>Рикошет перед вторым голом и вынужденная ранняя замена.</p></div></div><div class="form-group"><label>Что ты понял после матча?</label><textarea class="textarea" id="replayReflection" placeholder="Сформулируй правило для следующего решения"></textarea></div><div class="modal-actions one"><button class="primary-button" data-action="complete-replay" data-match-id="${matchId}">Сохранить урок и обновить Sports IQ</button></div>`});};
-  N.completeReplay=id=>{const reflection=$('#replayReflection')?.value.trim();if(!reflection||reflection.length<12){N.toast('Сформулируй конкретный урок');return;}const existing=N.state.decisions.some(d=>d.id===`completed-${id}`);if(!existing){N.state.decisions.unshift({id:`completed-${id}`,match:(N.matches.find(x=>x.id===id)||{}).home?`${N.matches.find(x=>x.id===id).home} — ${N.matches.find(x=>x.id===id).away}`:'Decision Replay',score:82,date:'Today',lesson:reflection});N.state.sportsIQ+=24;N.state.completedLoops+=1;N.state.skills.learning=Math.min(98,N.state.skills.learning+2);N.state.calibration.score=Math.min(95,N.state.calibration.score+1);}N.save();N.applyState();N.closeModal();N.toast('+24 Sports IQ · Sports Memory обновлена');};
+  const N = window.NOVIQ;
+  const app = N.app;
+  const $ = app.$, esc = app.escapeHtml;
+
+  function openLive(matchId = 'ars-bar') {
+    const match = app.getMatch(matchId);
+    if (!match) return;
+    const notes = app.state.liveNotes[matchId] || [];
+    app.openModal({ title: `${match.home} ${match.score || ''} ${match.away}`, kicker: `LIVE INTELLIGENCE · DEMO · ${match.minute || ''}′`, html: `
+      <div class="truth-banner"><b>Simulated live mode</b><p>Events below are static demo events for testing the interaction model.</p></div>
+      <div class="live-status-card"><span>THESIS STATUS</span><b>STILL HOLDS · 72%</b><div class="live-meter"><i style="--progress:72%"></i></div><p>Two assumptions are confirmed. One structural risk is rising.</p></div>
+      <div class="timeline-list">${(match.timeline || []).map((event) => `<div class="timeline-event ${event.type}"><span>${event.minute}′</span><div><b>${esc(event.title)}</b><p>${esc(event.effect)}</p></div></div>`).join('')}</div>
+      <div class="form-group"><label for="liveNote">Private live observation</label><textarea class="textarea short" id="liveNote" placeholder="Record what changed without editing the original thesis."></textarea></div>
+      <div class="modal-actions"><button class="secondary-button" data-action="save-live-note" data-match-id="${matchId}">Save observation</button><button class="primary-button" data-action="open-replay" data-match-id="int-bay">Open completed replay →</button></div>
+      ${notes.length ? `<div class="info-card"><h3>Saved observations</h3>${notes.map((note) => `<p>• ${esc(note.text)} <small>${new Date(note.at).toLocaleTimeString()}</small></p>`).join('')}</div>` : ''}` });
+  }
+
+  function saveLiveNote(matchId) {
+    const text = $('#liveNote')?.value.trim() || '';
+    if (text.length < 8) return app.toast('Write a more specific observation');
+    app.state.liveNotes[matchId] = [...(app.state.liveNotes[matchId] || []), { text, at: new Date().toISOString() }];
+    app.save();
+    openLive(matchId);
+    app.toast('Live observation saved separately from Thesis');
+  }
+
+  function openReplay(matchId = 'int-bay') {
+    const match = app.getMatch(matchId) || app.getMatch('int-bay');
+    const completed = app.state.completedReplays.includes(matchId);
+    app.openModal({ title: `${match.home} ${match.score || ''} ${match.away}`, kicker: 'DECISION REPLAY V2 · DEMO', html: `
+      <div class="replay-hero"><span>OVERALL DECISION SCORE</span><strong>82</strong><p>The exact score was not predicted, but the main tactical conflict and transition scenario were identified correctly.</p></div>
+      <div class="score-breakdown">${[['Thesis Quality',88],['Tactical IQ',91],['Context IQ',76],['Data IQ',78],['Risk Management',72],['Calibration',69]].map(([label,score]) => `<div class="score-row"><span>${label}</span><i><b style="width:${score}%"></b></i><strong>${score}</strong></div>`).join('')}</div>
+      <div class="replay-card"><h3>Confirmed assumptions</h3><p>Inter created vertical exits after inviting Bayern into wide pressure. The expected transition space appeared repeatedly.</p></div>
+      <div class="replay-card warning"><h3>Broken assumptions</h3><p>Set pieces mattered more than expected, and confidence was 11 points above the reasonable band.</p></div>
+      <div class="replay-card"><h3>Foreseeable vs random</h3><p><b>Foreseeable:</b> set-piece vulnerability and the high-variance playoff context. <b>Random:</b> one deflection in the second half.</p></div>
+      <div class="form-group"><label for="replayReflection">What will you do differently next time?</label><textarea class="textarea short" id="replayReflection" placeholder="Write one reusable decision rule.">${completed ? 'Reduce confidence when the thesis depends on one fragile assumption.' : ''}</textarea></div>
+      <div class="modal-actions one"><button class="primary-button" data-action="complete-replay" data-match-id="${matchId}" ${completed ? 'disabled' : ''}>${completed ? 'Replay completed' : 'Save lesson · +24 IQ'}</button></div>` });
+  }
+
+  function completeReplay(matchId) {
+    if (app.state.completedReplays.includes(matchId)) return;
+    const reflection = $('#replayReflection')?.value.trim() || '';
+    if (reflection.length < 20) return app.toast('Write one specific reusable lesson');
+    app.state.completedReplays.push(matchId);
+    app.state.sportsIQ += 24;
+    app.state.calibration.score = Math.min(100, app.state.calibration.score + 1);
+    app.state.decisions.unshift({ id: `${matchId}-${Date.now()}`, match: 'Inter — Bayern', score: 82, date: 'Today', lesson: reflection });
+    app.save(); app.applyState();
+    app.closeModal(); app.toast('+24 Sports IQ · Sports Memory updated');
+  }
+
+  N.live = { openLive, saveLiveNote, openReplay, completeReplay };
 })();

@@ -1,13 +1,16 @@
 {
-  "name": "NOVIQ 1.2 — Sports Intelligence",
+  "name": "NOVIQ 1.2 — Live Intelligence",
   "short_name": "NOVIQ",
-  "description": "Live Intelligence, Match Thesis, Decision Replay, Sports IQ and Sports Memory.",
+  "description": "A mobile-first sports intelligence prototype built around Match Thesis, Decision Replay, Sports IQ and Sports Memory.",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
   "background_color": "#07080d",
   "theme_color": "#07080d",
   "orientation": "portrait-primary",
-  "categories": ["sports", "education", "lifestyle"],
-  "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "lang": "en",
+  "categories": ["sports", "education", "productivity"],
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
 }

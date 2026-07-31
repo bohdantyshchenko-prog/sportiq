@@ -1,16 +1,39 @@
+window.NOVIQ = window.NOVIQ || {};
 (() => {
   'use strict';
-  const N = window.NOVIQ;
-  if (localStorage.getItem(N.config.storageKey)) return;
-  for (const key of N.config.legacyKeys) {
+  const { config } = window.NOVIQ;
+  try { if (localStorage.getItem(config.storageKey)) return; } catch (error) { console.warn('NOVIQ migration unavailable', error); return; }
+  for (const key of config.legacyKeys) {
     try {
-      const raw=localStorage.getItem(key); if(!raw) continue;
-      const old=JSON.parse(raw); if(!old) continue;
-      const migrated={...N.util.clone(N.defaultState),...old,version:'1.2'};
-      if(old.thesis){migrated.thesis={matchId:'mci-rma',mode:'expert',outcome:'mci',scenario:'',reason:'',secondaryReason:'',risk:'',alternative:'',changeMind:'',confidence:68,sources:['briefing'],versions:[],locked:false,...old.thesis};}
-      if(Array.isArray(old.decisions))migrated.decisions=old.decisions.map((d,i)=>({id:d.id||`legacy-${i}`,match:d.match||'Legacy decision',score:d.score||'—',date:d.date||'Earlier',lesson:d.lesson||'',...d}));
-      localStorage.setItem(N.config.storageKey,JSON.stringify(migrated));
+      const legacy = JSON.parse(localStorage.getItem(key));
+      if (!legacy) continue;
+      const migrated = {
+        version: '1.2.0',
+        language: legacy.language || 'ru',
+        theme: legacy.theme || 'dark',
+        sportsIQ: Number(legacy.sportsIQ) || 8542,
+        skills: legacy.skills || undefined,
+        calibration: legacy.calibration || undefined,
+        thesisByMatch: {},
+        decisions: Array.isArray(legacy.decisions) ? legacy.decisions : undefined,
+        patterns: legacy.patterns || undefined,
+        notifications: legacy.notifications || undefined,
+        favorites: legacy.favorites || undefined,
+        account: legacy.account || { mode: 'guest' },
+        migration: { from: key, at: new Date().toISOString() }
+      };
+      if (legacy.thesis) {
+        const matchId = legacy.thesis.matchId || 'mci-rma';
+        migrated.thesisByMatch[matchId] = {
+          mode: 'expert', outcome: legacy.thesis.outcome || 'draw', scenario: '', reason: '', secondaryReason: '',
+          keyPlayer: '', risk: '', alternative: '', changeMind: '', confidence: 68, sources: ['briefing'], versions: [],
+          ...legacy.thesis, matchId
+        };
+      }
+      localStorage.setItem(config.storageKey, JSON.stringify(migrated));
       break;
-    } catch(error){console.warn('NOVIQ migration skipped',key,error);}
+    } catch (error) {
+      console.warn(`NOVIQ migration skipped for ${key}`, error);
+    }
   }
 })();

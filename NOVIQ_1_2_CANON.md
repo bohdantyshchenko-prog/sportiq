@@ -2,60 +2,57 @@
 
 ## Product objective
 
-Move NOVIQ from a closed demo decision loop toward a real-match-ready daily product without pretending that external sports data or server AI are already connected.
+Move the unique NOVIQ loop from an isolated demo decision into a repeatable daily product structure without pretending that unconnected data is live.
 
 ## Locked loop
 
-1. Daily Intelligence Brief
-2. Personal Match Recommendation
-3. Dynamic AI Briefing
-4. Match Thesis V2
-5. Decision Lock
-6. Live Thesis Tracking
-7. Decision Replay V2
-8. Sports IQ update
-9. Sports Memory V3
-10. Explainable next recommendation
+1. Personal recommendation
+2. Dynamic AI Briefing
+3. Match Thesis V2
+4. AI Review and Decision Lock
+5. Live Intelligence observations
+6. Decision Replay V2
+7. Sports IQ update
+8. Sports Memory V3
+9. Weekly Intelligence Report and next mission
 
-## Release scope
+## 1.2 scope
 
-### Match Center
-- date navigation
-- search
-- For You, Favorites, Live, Thesis and Replay filters
-- intelligence value and explanation
-- provider-status banner
+### Personal Match Center
+- search and date filters
+- favourite teams and tournaments
+- live, thesis and replay buckets
+- analytical-value explanation
+- provider-status visibility
 
 ### Dynamic Briefing
 - confirmed facts
 - analytical signals
 - unknowns
-- confidence instruction
+- versioned changes and impact
 - explicit demo/source status
 
 ### Live Intelligence
-- immutable original Thesis
-- separate live notes
-- thesis status
-- confirmed arguments
-- growing risks
-- relevant event timeline
+- thesis health
+- confirmed and broken assumptions
+- meaningful event timeline
+- private live observations separated from the immutable thesis
 
 ### Retention
 - Daily Intelligence Brief
-- personal mission
-- explainable recommendation rail
-- Weekly Intelligence Report V2
+- explainable recommendations
+- Weekly Report V2
+- meaningful-notification preferences
 - unfinished-loop continuation
 
-### Architecture
-- sports gateway interface
-- AI service interface
-- local state migration from 1.0 and 1.1
-- account-ready state model
-- provider-ready Match Center
-- PWA and offline shell
+### Platform readiness
+- sports-data adapter boundary
+- AI service boundary
+- account and sync shell
+- local migration
+- PWA cache and graceful fallback
+- proposed Supabase schema with RLS
 
-## Explicit exclusions
+## Exclusions
 
-Version 1.2 does not claim real live sports data, real authentication, cloud sync, push delivery, server AI, friends, reputation, Thesis Battles, scouting, betting or payments.
+Version 1.2 does not claim real sports data, real AI, real authentication, cloud sync, push delivery, social reputation, betting, scouting, payments or multi-sport support.

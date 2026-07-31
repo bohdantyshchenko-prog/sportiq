@@ -1,72 +1,81 @@
+window.NOVIQ = window.NOVIQ || {};
 (() => {
   'use strict';
-  const N = window.NOVIQ;
-  N.util = {
-    clone: v => JSON.parse(JSON.stringify(v)),
-    escape: value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])),
-    format: value => new Intl.NumberFormat(N.state?.language === 'en' ? 'en-US' : N.state?.language === 'ua' ? 'uk-UA' : 'ru-RU').format(value),
-    now: () => new Date().toISOString()
-  };
-  N.storage = {
-    load() {
-      try {
-        const raw = localStorage.getItem(N.config.storageKey);
-        if (!raw) return N.util.clone(N.defaultState);
-        const saved = JSON.parse(raw);
-        return { ...N.util.clone(N.defaultState), ...saved,
-          skills:{...N.defaultState.skills,...(saved.skills||{})},
-          skillTrust:{...N.defaultState.skillTrust,...(saved.skillTrust||{})},
-          calibration:{...N.defaultState.calibration,...(saved.calibration||{})},
-          notifications:{...N.defaultState.notifications,...(saved.notifications||{})},
-          favorites:{...N.defaultState.favorites,...(saved.favorites||{})},
-          account:{...N.defaultState.account,...(saved.account||{})}
-        };
-      } catch (error) {
-        console.warn('NOVIQ state reset', error);
-        return N.util.clone(N.defaultState);
-      }
-    },
-    save() { localStorage.setItem(N.config.storageKey, JSON.stringify(N.state)); }
-  };
-  N.sportsGateway = {
-    mode:'demo',
-    async getMatches(){ return N.util.clone(N.matches); },
-    async getMatch(id){ return N.util.clone(N.matches.find(m=>m.id===id)); },
-    status(){ return { mode:'demo', provider:N.config.provider, updatedAt:N.util.now(), truthful:true, connected:false }; }
-  };
-  N.ai = {
-    async briefing(match){
-      await new Promise(r=>setTimeout(r,350));
+  const { config, demo } = window.NOVIQ;
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  class DemoSportsDataAdapter {
+    async listMatches() {
+      await delay(120);
+      return typeof structuredClone === 'function' ? structuredClone(demo.matches) : JSON.parse(JSON.stringify(demo.matches));
+    }
+    async getMatch(id) {
+      await delay(80);
+      const match = demo.matches.find((item) => item.id === id);
+      if (!match) throw new Error('Match not found');
+      return JSON.parse(JSON.stringify(match));
+    }
+    async getLiveTimeline(id) {
+      const match = await this.getMatch(id);
+      return match.timeline || [];
+    }
+    status() {
       return {
-        facts:['Матч и время взяты из демонстрационного набора 1.2.','Стартовые составы пока не подключены к внешнему провайдеру.'],
-        signals:[`${match.home} вероятнее будет задавать базовую структуру владения.`,`${match.away} опаснее при изменении темпа и переходах.`],
-        unknowns:['Подтверждённые составы','Свежие медицинские данные','Погодные условия'],
-        change:'До получения составов не поднимай уверенность выше 70%.', confidence:'medium'
+        mode: 'demo', connected: true, provider: 'NOVIQ Demo Adapter', freshness: 'Static test dataset',
+        limitations: ['Not official', 'Not live', 'No commercial data rights implied']
       };
-    },
-    async reviewThesis(thesis){
-      await new Promise(r=>setTimeout(r,280));
-      const specificity=Math.min(96,54+Math.round((thesis.scenario.length+thesis.reason.length+thesis.risk.length)/8));
-      const evidence=Math.min(94,55+(thesis.sources?.length||0)*10+(thesis.secondaryReason?.length>15?12:0));
-      const risk=Math.min(92,thesis.risk.length>18?84:64);
-      const calibration=thesis.confidence>80?62:thesis.confidence<55?70:86;
-      return { specificity,evidence,risk,calibration,
-        bias:thesis.confidence>80?'Overconfidence risk':'No dominant bias detected',
-        question:'Какой факт из стартового состава заставит тебя изменить уверенность минимум на 10 пунктов?',
-        alternative:thesis.alternative||'Соперник переживает стартовое давление и переводит игру в переходный сценарий.' };
-    },
-    async ask(question){
-      await new Promise(r=>setTimeout(r,420));
-      if(/увер|confidence/i.test(question)) return `Текущая калибровка — ${N.state.calibration.score}%. Главная ошибка находится в диапазоне 80%+: фактическая успешность заметно ниже заявленной.`;
-      if(/похож|ошиб|memory/i.test(question)) return 'Похожий паттерн был в Inter — Bayern: сильное тактическое чтение, но недостаточный вес стандартов и слишком высокая уверенность.';
-      return 'Смотри не только на владение, а на качество продвижения после отбора, структуру rest-defence и пространство за крайними защитниками.';
     }
-  };
-  N.pwa = {
-    prompt:null,
-    init(){
-      if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-      window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();this.prompt=event;if(!N.state.installDismissed){const b=document.querySelector('#installBanner');if(b)b.hidden=false;}});
+  }
+
+  class HttpSportsDataAdapter {
+    constructor(baseUrl) { this.baseUrl = baseUrl; }
+    async request(path) {
+      const response = await fetch(`${this.baseUrl}${path}`, { headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Sports API error ${response.status}`);
+      return response.json();
     }
-  };
+    listMatches() { return this.request('/matches'); }
+    getMatch(id) { return this.request(`/matches/${encodeURIComponent(id)}`); }
+    getLiveTimeline(id) { return this.request(`/matches/${encodeURIComponent(id)}/timeline`); }
+    status() { return { mode: 'live', connected: true, provider: this.baseUrl, freshness: 'Server managed' }; }
+  }
+
+  class DemoAIService {
+    async reviewThesis(thesis) {
+      await delay(260);
+      const textLength = [thesis.scenario, thesis.reason, thesis.secondaryReason, thesis.risk, thesis.alternative]
+        .filter(Boolean).join(' ').length;
+      const sourceCount = (thesis.sources || []).length;
+      const specificity = Math.min(96, 54 + Math.round(textLength / 16));
+      const evidence = Math.min(94, 48 + sourceCount * 12 + (thesis.secondaryReason?.length > 20 ? 12 : 0));
+      const risk = thesis.risk?.length > 18 && thesis.changeMind?.length > 14 ? 88 : 66;
+      const calibration = thesis.confidence > 79 ? 64 : thesis.confidence < 52 ? 70 : 84;
+      const causality = thesis.reason?.length > 28 && thesis.scenario?.length > 28 ? 86 : 68;
+      return {
+        specificity, evidence, risk, calibration, causality,
+        bias: thesis.confidence > 80 ? 'Possible overconfidence: the decision still depends on unconfirmed conditions.' : 'No severe confidence distortion detected.',
+        blindSpot: thesis.risk?.length > 18 ? 'Explain how the risk changes the match structure, not only the result.' : 'The main risk is not developed enough.',
+        challenge: 'What one pre-match fact would make you reduce confidence by at least 8 points?',
+        alternative: thesis.alternative || 'The opponent survives the first pressure phase and turns the match into a transition contest.'
+      };
+    }
+    async answer(question, state) {
+      await delay(340);
+      const q = question.toLowerCase();
+      if (/confidence|увер|впевнен/.test(q)) {
+        return `Your current calibration score is ${state.calibration.score}%. The weakest band is 80–89%, where stated confidence is materially above observed success.`;
+      }
+      if (/memory|ошиб|помил|pattern/.test(q)) {
+        return 'The closest repeated pattern is lineup bias: a strong starting XI raises your confidence before context and fatigue are checked.';
+      }
+      return 'The main analytical question is whether possession becomes territorial progression. Track the first forward pass after turnovers and the space behind advanced full-backs.';
+    }
+  }
+
+  const sports = config.dataMode === 'live' && config.sportsApiBaseUrl
+    ? new HttpSportsDataAdapter(config.sportsApiBaseUrl)
+    : new DemoSportsDataAdapter();
+
+  window.NOVIQ.services = { sports, ai: new DemoAIService() };
 })();

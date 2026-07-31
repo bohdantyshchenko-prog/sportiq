@@ -1,15 +1,83 @@
+window.NOVIQ = window.NOVIQ || {};
 (() => {
   'use strict';
-  const N=window.NOVIQ;
-  N.openCalibration=()=>N.openModal({title:'Confidence Lab V2',kicker:'PREDICTED CONFIDENCE VS ACTUAL',html:`<div class="replay-hero"><span>CALIBRATION SCORE</span><strong>${N.state.calibration.score}%</strong><p>Чем ближе заявленная уверенность к фактической успешности, тем выше качество решения.</p></div><div class="calibration-table modal-table">${N.state.calibration.bins.map(b=>`<div class="calibration-row"><span>${b.label}</span><i><b style="width:${b.actual}%"></b></i><strong>${b.actual}%</strong><small>expected ${b.predicted}%</small></div>`).join('')}</div><div class="review-card warning"><h3>Главная зона риска</h3><p>При уверенности 80–89% твоя фактическая успешность около 64%. Состав и имя фаворита слишком сильно поднимают оценку.</p></div><div class="info-card"><h3>Практическое правило</h3><p>До подтверждения составов используй потолок 70%. Повышай уверенность только после независимого подтверждения сценария.</p></div>`});
-  N.openPattern=id=>{const p=N.state.patterns.find(x=>x.id===id);if(!p)return;N.openModal({title:p.title,kicker:'SPORTS MEMORY V3 · EVIDENCE BACKED',html:`<div class="review-card ${p.severity==='strength'?'success':'warning'}"><h3>${p.skill} · ${p.confidence}% trust</h3><p>${N.util.escape(p.summary)}</p></div><div class="info-card"><h3>Доказательства</h3><div class="evidence-row">${p.evidence.map(e=>`<i>${N.util.escape(e)}</i>`).join('')}</div></div><div class="info-card"><h3>Как это используется</h3><p>Паттерн влияет на выбор матчей, личную миссию, AI Review и вопросы Decision Replay. Один матч не создаёт устойчивый вывод.</p></div><div class="modal-actions"><button class="secondary-button" data-action="dispute-pattern" data-pattern="${p.id}">Оспорить</button><button class="primary-button" data-action="open-mission">Открыть миссию</button></div>`});};
-  N.openMission=()=>N.openModal({title:N.state.mission.title,kicker:'PERSONAL MISSION',html:`<p class="modal-copy">Миссия выбрана из повторяющегося паттерна, а не из требования просто открыть приложение.</p><div class="mission-big-progress"><i style="--progress:${N.state.mission.progress/N.state.mission.target*100}%"></i></div><div class="review-score-grid"><div class="review-score"><span>Progress</span><b>${N.state.mission.progress}/${N.state.mission.target}</b></div><div class="review-score"><span>Reward</span><b>+12 IQ</b></div></div><div class="info-card"><h3>Условие</h3><p>${N.state.mission.copy}</p></div><div class="modal-actions one"><button class="primary-button" data-action="open-thesis" data-match-id="mci-rma">Применить в Thesis →</button></div>`});
-  N.openWeeklyReport=()=>N.openModal({title:'Weekly Intelligence Report V2',kicker:'YOUR WEEK IN NOVIQ',html:`<div class="weekly-report-hero"><span>WEEK 31</span><h3>Ты стал точнее в сценариях, но не осторожнее в уверенности</h3><p>4 полных цикла · +86 Sports IQ · 1 новый подтверждаемый паттерн</p></div><div class="report-grid"><div><small>SPORTS IQ</small><b>+86</b></div><div><small>SCENARIOS</small><b>+9%</b></div><div><small>CALIBRATION</small><b>−2%</b></div><div><small>LOOPS</small><b>4</b></div></div><div class="review-card success"><h3>Лучшая гипотеза</h3><p>Arsenal — Barcelona: точное чтение полуфлангов и rest-defence.</p></div><div class="review-card warning"><h3>Самая полезная ошибка</h3><p>Inter — Bayern: уверенность 81% не соответствовала количеству неизвестных.</p></div><div class="info-card"><h3>Следующий матч</h3><p>Polissya — Dynamo Kyiv выбран для проверки lineup bias и контекстного мышления.</p></div><div class="info-card"><h3>Миссия недели</h3><p>Во всех новых Thesis указывай альтернативный сценарий и конкретное условие изменения мнения.</p></div>`});
-  N.openRecommendation=id=>{const r=N.recommendations.find(x=>x.id===id)||N.recommendations[0];N.openModal({title:r.title,kicker:`PERSONAL RECOMMENDATION · ${r.score}`,html:`<div class="recommendation-proof"><span>${r.type}</span><h3>Почему NOVIQ выбрал это</h3><p>${r.copy}</p></div><div class="info-card"><h3>Использованные сигналы</h3><p>Любимые команды, активный паттерн, слабый навык, сложность матча и незавершённый Intelligence Loop.</p></div><div class="review-card purple"><h3>Explainable recommendation</h3><p>Рекомендация не основана на рекламе или популярности матча.</p></div><div class="modal-actions one"><button class="primary-button" data-action="${r.action}" ${r.target?`data-match-id="${r.target}"`:''}>Открыть →</button></div>`});};
-  N.openRecommendations=()=>N.openModal({title:'Recommendation Engine V1',kicker:'WHY THIS, NOT EVERYTHING',html:`${N.recommendations.map(r=>`<button class="recommendation-list-item" data-action="open-recommendation" data-recommendation="${r.id}"><span>${r.type}</span><div><b>${r.title}</b><p>${r.copy}</p></div><i>${r.score}</i></button>`).join('')}<div class="truth-banner"><b>Не рекламный feed</b><p>В 1.2 рекомендации локальные и демонстрационные, но уже объяснимые. Серверная модель появится после подключения backend.</p></div>`});
-  N.openSkill=key=>N.openModal({title:N.skillName(key),kicker:'SKILL EVIDENCE',html:`<div class="replay-hero"><span>${N.skillName(key).toUpperCase()}</span><strong>${N.state.skills[key]}</strong><p>Уровень доверия к оценке: ${N.state.skillTrust[key]}%.</p></div><div class="info-card"><h3>Что измеряется</h3><p>${({tactical:'понимание структуры, пространства и переходов',context:'составы, нагрузка, мотивация и турнирный контекст',data:'корректное использование статистики и размера выборки',decision:'риск, альтернативы и калибровка',learning:'качество постматчевого вывода и перенос урока'})[key]}</p></div><div class="review-card warning"><h3>Ограничение</h3><p>Для подтверждения устойчивого уровня нужны решения в разных турнирах и типах матчей.</p></div>`});
-  N.openDecision=id=>{if(id==='current-thesis'){N.openThesis(N.state.thesis?.matchId);return;}const d=N.state.decisions.find(x=>x.id===id);if(id==='int-bay'||id?.startsWith('completed-')){N.openReplay(id==='int-bay'?'int-bay':id.replace('completed-',''));return;}N.openModal({title:d?.match||'Decision',kicker:'DECISION HISTORY',html:`<div class="replay-hero"><span>DECISION SCORE</span><strong>${d?.score||'—'}</strong><p>${N.util.escape(d?.lesson||'')}</p></div>`});};
-  N.openLesson=()=>N.openModal({title:'Управление неизвестностью',kicker:'LEARNING LOOP · 4 MIN',html:`<p class="modal-copy">Неизвестность не означает отсутствие решения. Она должна снижать уверенность и менять диапазон сценариев.</p><div class="info-card"><h3>Пример</h3><p>До стартовых составов разумный диапазон 60–70%. После подтверждения состава уверенность можно изменить, но исходный Thesis остаётся в истории.</p></div><div class="lesson-quiz"><h3>Контрольный вопрос</h3><button class="quiz-option" data-action="answer-lesson" data-correct="false">Неизвестные данные нужно игнорировать</button><button class="quiz-option" data-action="answer-lesson" data-correct="true">Неизвестность должна снижать уверенность и фиксироваться как риск</button></div><div id="lessonFeedback"></div>`});
-  N.answerLesson=el=>{const ok=el.dataset.correct==='true';N.$$('.quiz-option',N.$('#modalContent')).forEach(b=>b.disabled=true);N.$('#lessonFeedback').innerHTML=`<div class="review-card ${ok?'success':'warning'}"><h3>${ok?'Верно':'Нужно пересмотреть'}</h3><p>${ok?'Ты отделил качество решения от иллюзии полной информации.':'Неизвестность — часть решения, а не повод притвориться, что данных достаточно.'}</p></div>${ok?'<div class="modal-actions one"><button class="primary-button" data-action="complete-lesson">Сохранить урок</button></div>':''}`;};
-  N.completeLesson=()=>{if(!N.state.lessonsCompleted.includes('uncertainty')){N.state.lessonsCompleted.push('uncertainty');N.state.sportsIQ+=8;N.state.skills.learning=Math.min(98,N.state.skills.learning+1);N.save();N.applyState();}N.closeModal();N.toast('+8 Sports IQ · урок сохранён');};
+  const N = window.NOVIQ;
+  const app = N.app;
+  const $ = app.$, esc = app.escapeHtml;
+
+  function openCalibration() {
+    app.openModal({ title: 'Confidence Lab V2', kicker: 'CALIBRATION', html: `<div class="replay-hero"><span>CALIBRATION SCORE</span><strong>${app.state.calibration.score}%</strong><p>Your 60–69% band is close to reality. The 80–89% band remains substantially overconfident.</p></div>
+      <div class="calibration-table modal-table">${app.state.calibration.bins.map((bin) => `<div class="calibration-row"><span>${bin.label}</span><i><b style="width:${bin.predicted}%"></b><em style="left:${bin.actual}%"></em></i><strong>${bin.predicted}% / ${bin.actual}%</strong></div>`).join('')}</div>
+      <div class="info-card"><h3>Reading the chart</h3><p>The first number is stated confidence. The second is observed success in the demo history. A smaller gap means better calibration.</p></div>
+      <div class="review-card warning"><h3>Current rule</h3><p>Do not use 80%+ before lineups and key availability are confirmed.</p></div>` });
+  }
+
+  function openPattern(id) {
+    const pattern = app.state.patterns.find((item) => item.id === id);
+    if (!pattern) return;
+    app.openModal({ title: pattern.title, kicker: 'SPORTS MEMORY V3', html: `<div class="review-card ${pattern.severity === 'strength' ? 'success' : 'warning'}"><h3>${esc(pattern.skill)} · ${pattern.confidence}% confidence</h3><p>${esc(pattern.summary)}</p></div>
+      <div class="info-card"><h3>Evidence</h3><div class="evidence-row">${pattern.evidence.map((item) => `<i>${esc(item)}</i>`).join('')}</div></div>
+      <div class="info-card"><h3>Action rule</h3><p>${esc(pattern.action)}</p></div>
+      <div class="modal-actions"><button class="secondary-button" data-action="dispute-pattern" data-pattern="${id}">Dispute pattern</button><button class="primary-button" data-action="open-mission">Open mission</button></div>` });
+  }
+
+  function openMission() {
+    const m = app.state.mission;
+    app.openModal({ title: m.title, kicker: 'PERSONAL MISSION', html: `<p class="modal-copy">This mission is selected from an evidence-backed Sports Memory pattern.</p>
+      <div class="mission-big-progress"><i style="--progress:${Math.min(100, m.progress / m.target * 100)}%"></i></div>
+      <div class="review-score-grid"><div class="review-score"><span>Progress</span><b>${m.progress}/${m.target}</b></div><div class="review-score"><span>Reward</span><b>+12 IQ</b></div></div>
+      <div class="info-card"><h3>Condition</h3><p>${esc(m.copy)}</p></div>
+      <div class="modal-actions one"><button class="primary-button" data-action="open-thesis" data-match-id="mci-rma">Apply in Match Thesis →</button></div>` });
+  }
+
+  function openLesson() {
+    const completed = app.state.completedLessons.includes('unknown-confidence');
+    app.openModal({ title: 'Unknown conditions and confidence', kicker: 'LEARNING LOOP · 3 MIN', html: `<p class="modal-copy">Confidence should reflect uncertainty, not only the strength of the favourite.</p>
+      <div class="info-card"><h3>Example</h3><p>A team can have a strong expected lineup while fatigue, tactical fit and late availability remain uncertain.</p></div>
+      <div class="lesson-quiz"><h3>Best decision before lineups?</h3><button class="quiz-option" data-action="answer-lesson" data-correct="false">Raise confidence because the squad is stronger</button><button class="quiz-option" data-action="answer-lesson" data-correct="true">Keep a wider probability range until key conditions are confirmed</button><button class="quiz-option" data-action="answer-lesson" data-correct="false">Ignore lineups completely</button></div><div id="lessonFeedback"></div>
+      ${completed ? '<div class="review-card success"><h3>Lesson completed</h3><p>Stored in Sports Memory.</p></div>' : ''}` });
+  }
+
+  function answerLesson(button) {
+    const correct = button.dataset.correct === 'true';
+    app.$$('.quiz-option', $('#modalContent')).forEach((item) => { item.disabled = true; });
+    $('#lessonFeedback').innerHTML = `<div class="review-card ${correct ? 'success' : 'warning'}"><h3>${correct ? 'Correct' : 'Review the principle'}</h3><p>${correct ? 'You separated squad strength from the uncertainty around the decision.' : 'Confidence must include what is still unknown.'}</p></div>${correct ? '<div class="modal-actions one"><button class="primary-button" data-action="complete-lesson">Save lesson · +8 IQ</button></div>' : ''}`;
+  }
+
+  function completeLesson() {
+    if (!app.state.completedLessons.includes('unknown-confidence')) {
+      app.state.completedLessons.push('unknown-confidence');
+      app.state.sportsIQ += 8;
+      app.state.skills.learning.score = Math.min(99, app.state.skills.learning.score + 1);
+      app.save(); app.applyState();
+    }
+    app.closeModal(); app.toast('+8 Sports IQ · lesson saved');
+  }
+
+  function openWeeklyReport() {
+    app.openModal({ title: 'Weekly Intelligence Report V2', kicker: 'YOUR WEEK', html: `<div class="replay-hero"><span>WEEKLY SPORTS IQ</span><strong>+86</strong><p>You became more accurate in match scenarios, but not more cautious when information was incomplete.</p></div>
+      <div class="weekly-report-grid"><div><span>Completed loops</span><b>4</b></div><div><span>Scenario quality</span><b>+9%</b></div><div><span>Calibration</span><b>−2%</b></div><div><span>New patterns</span><b>1</b></div></div>
+      <div class="review-card success"><h3>Best decision</h3><p>Arsenal — Barcelona: the half-space scenario was specific and falsifiable.</p></div>
+      <div class="review-card warning"><h3>Most useful mistake</h3><p>Inter — Bayern: set-piece risk was available before the match but underweighted.</p></div>
+      <div class="info-card"><h3>Next week</h3><p>Complete one thesis with an explicit alternative scenario and stay below 75% confidence until lineups are confirmed.</p></div>` });
+  }
+
+  function openRecommendations() {
+    app.openModal({ title: 'Why these recommendations?', kicker: 'RECOMMENDATION ENGINE V1', html: N.demo.recommendations.map((item) => `<div class="info-card"><h3>${esc(item.title)}</h3><p>${esc(item.reason)}</p></div>`).join('') + '<div class="truth-banner"><b>Explainable selection</b><p>Recommendations use favourite teams, active patterns, weak skills and unfinished loops. No paid placement is used in this demo.</p></div>' });
+  }
+
+  function openRecommendation(type) {
+    if (type === 'match') {
+      const match = app.getMatch('pol-dyn');
+      app.openModal({ title: `${match.home} — ${match.away}`, kicker: 'PERSONAL RECOMMENDATION', html: `<div class="info-card"><h3>Why this match</h3><p>It trains Context IQ without the extreme uncertainty of a knockout game and matches your local interests.</p></div><div class="info-card"><h3>Focus</h3><p>Separate emotional preference from evidence about calendar, roles and match state.</p></div><div class="modal-actions one"><button class="primary-button" data-action="open-thesis" data-match-id="pol-dyn">Create Thesis →</button></div>` });
+    }
+  }
+
+  function openSkill(key) {
+    const skill = app.state.skills[key];
+    if (!skill) return;
+    app.openModal({ title: skill.label, kicker: 'SKILL EVIDENCE', html: `<div class="replay-hero"><span>${esc(skill.label.toUpperCase())}</span><strong>${skill.score}</strong><p>Evidence confidence ${skill.trust}%. The score is not treated as fully stable until more decisions exist across different match types.</p></div><div class="info-card"><h3>Latest evidence</h3><p>Inter — Bayern Decision Replay connected the pre-match thesis, actual match scenario and post-match lesson.</p></div><div class="review-card warning"><h3>Limitation</h3><p>This prototype uses demo decisions. Real confidence requires server-stored, timestamped decisions.</p></div>` });
+  }
+
+  N.intelligence = { openCalibration, openPattern, openMission, openLesson, answerLesson, completeLesson, openWeeklyReport, openRecommendations, openRecommendation, openSkill };
 })();
