@@ -1,21 +1,7 @@
-const CACHE='noviq-2.0-platform-2026-08-01';
-const ASSETS=['./','./index.html','./styles.css','./styles-core.css','./styles-components.css','./styles-premium.css','./styles-assets.css','./styles-editorial.css','./runtime-config.js','./config.js','./api-client.js','./data.js','./services.js','./compat.js','./ui-part-1.js','./ui-part-2.js','./ui-part-3.js','./ui-mount.js','./push-client.js','./app-core.js','./app-thesis.js','./app-live.js','./app-intelligence.js','./app-shell.js','./manifest.webmanifest','./icon.svg','./assets/profile-bt.svg','./assets/profile-bogdan.svg','./assets/hero-athlete.svg','./assets/stadium-night.svg','./assets/story-tactics.svg'];
+const CACHE='noviq-3.0-experience-2026-08-01';
+const ASSETS=['./','./index.html','./styles.css','./styles-core.css','./styles-components.css','./styles-premium.css','./styles-assets.css','./styles-editorial.css','./styles-v3.css','./runtime-config.js','./config.js','./api-client.js','./data.js','./services.js','./compat.js','./ui-part-1.js','./ui-part-2.js','./ui-part-3.js','./ui-mount.js','./experience-v3.js','./push-client.js','./app-core.js','./app-thesis.js','./app-live.js','./app-intelligence.js','./app-shell.js','./manifest.webmanifest','./icon.svg','./assets/profile-bt.svg','./assets/profile-bogdan.svg','./assets/hero-athlete.svg','./assets/stadium-night.svg','./assets/story-tactics.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',event=>{
-  if(event.request.method!=='GET')return;
-  const request=event.request;
-  const url=new URL(request.url);
-  if(url.pathname.includes('/v1/')||url.origin!==self.location.origin){event.respondWith(fetch(request).catch(()=>new Response('',{status:503,statusText:'Unavailable'})));return;}
-  event.respondWith(fetch(request).then(response=>{if(response&&response.ok&&response.type!=='opaque'){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy));}return response;}).catch(async()=>{const cached=await caches.match(request);if(cached)return cached;if(request.mode==='navigate')return caches.match('./index.html');return new Response('',{status:503,statusText:'Offline'});}));
-});
-self.addEventListener('push',event=>{
-  let payload={title:'NOVIQ',body:'Новое спортивное обновление готово.',url:'/'};
-  try{payload={...payload,...event.data?.json()};}catch{}
-  event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,icon:'./icon.svg',badge:'./icon.svg',data:{url:payload.url||'/'},tag:payload.tag||'noviq-update',renotify:false}));
-});
-self.addEventListener('notificationclick',event=>{
-  event.notification.close();
-  const target=new URL(event.notification.data?.url||'/',self.location.origin).href;
-  event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(windows=>{const existing=windows.find(client=>client.url.startsWith(self.location.origin));if(existing){existing.navigate(target);return existing.focus();}return clients.openWindow(target);}));
-});
+self.addEventListener('fetch',event=>{if(event.request.method!=='GET')return;const request=event.request;const url=new URL(request.url);if(url.pathname.includes('/v1/')||url.origin!==self.location.origin){event.respondWith(fetch(request).catch(()=>new Response('',{status:503,statusText:'Unavailable'})));return;}event.respondWith(fetch(request).then(response=>{if(response&&response.ok&&response.type!=='opaque'){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(request,copy));}return response;}).catch(async()=>{const cached=await caches.match(request);if(cached)return cached;if(request.mode==='navigate')return caches.match('./index.html');return new Response('',{status:503,statusText:'Offline'});}));});
+self.addEventListener('push',event=>{let payload={title:'NOVIQ',body:'Новое спортивное обновление готово.',url:'/'};try{payload={...payload,...event.data?.json()};}catch{}event.waitUntil(self.registration.showNotification(payload.title,{body:payload.body,icon:'./icon.svg',badge:'./icon.svg',data:{url:payload.url||'/'},tag:payload.tag||'noviq-update',renotify:false}));});
+self.addEventListener('notificationclick',event=>{event.notification.close();const target=new URL(event.notification.data?.url||'/',self.location.origin).href;event.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(windows=>{const existing=windows.find(client=>client.url.startsWith(self.location.origin));if(existing){existing.navigate(target);return existing.focus();}return clients.openWindow(target);}));});
