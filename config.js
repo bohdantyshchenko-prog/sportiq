@@ -3,9 +3,9 @@
   const N = window.NOVIQ = window.NOVIQ || {};
   const runtime = window.NOVIQ_RUNTIME_CONFIG || {};
   N.config = {
-    version: '3.2.0',
-    storageKey: 'noviq-v3.2-state',
-    legacyKeys: ['noviq-v2-state', 'noviq-v1.4-state', 'noviq-v1.2-state', 'noviq-v1.1-state', 'noviq-v1-state'],
+    version: '3.3.0',
+    storageKey: 'noviq-v3.3-state',
+    legacyKeys: ['noviq-v3.2-state', 'noviq-v2-state', 'noviq-v1.4-state', 'noviq-v1.2-state', 'noviq-v1.1-state', 'noviq-v1-state'],
     demoMode: runtime.demoMode !== false,
     apiBaseUrl: String(runtime.apiBaseUrl || '').trim(),
     requestTimeoutMs: Number(runtime.requestTimeoutMs) || 8000,
@@ -13,24 +13,14 @@
     buildDate: '2026-08-01'
   };
   N.defaultState = {
-    version: '3.2.0', language: 'ru', theme: 'dark', sportsIQ: 8542,
+    version: '3.3.0', language: 'ru', theme: 'dark', sportsIQ: 8542,
     skills: { tactical: 89, context: 74, data: 78, decision: 81, learning: 86 },
     skillTrust: { tactical: 82, context: 69, data: 72, decision: 77, learning: 80 },
-    calibration: {
-      score: 72,
-      history: [65,66,68,67,70,71,72],
-      bins: [
-        { label:'50–59%', predicted:55, actual:58 },
-        { label:'60–69%', predicted:65, actual:67 },
-        { label:'70–79%', predicted:75, actual:69 },
-        { label:'80–89%', predicted:85, actual:64 }
-      ]
-    },
-    diagnostic: { completed:false, answers:[], lastAt:null },
-    thesis: null,
-    liveNotes: [],
-    completedLoops: 12,
-    lessonsCompleted: [],
+    calibration: { score: 72, history: [65,66,68,67,70,71,72], bins: [
+      { label:'50–59%', predicted:55, actual:58 }, { label:'60–69%', predicted:65, actual:67 },
+      { label:'70–79%', predicted:75, actual:69 }, { label:'80–89%', predicted:85, actual:64 }
+    ] },
+    diagnostic: { completed:false, answers:[], lastAt:null }, thesis: null, liveNotes: [], completedLoops: 12, lessonsCompleted: [],
     mission: { id:'alternative-scenario', title:'Назови альтернативный сценарий', copy:'Добавь альтернативный сценарий в следующий Thesis.', progress:0, target:1 },
     patterns: [
       { id:'lineup-bias', icon:'△', title:'Lineup bias', skill:'Decision IQ', severity:'warning', confidence:78, summary:'Сильный стартовый состав повышает твою уверенность в среднем на 11% сильнее, чем подтверждают контекст и нагрузка.', evidence:['4 из 6 последних Thesis','Inter — Bayern','PSG — Liverpool'] },
@@ -44,15 +34,8 @@
     ],
     favorites: { teams:['Polissya','Dynamo Kyiv'], tournaments:['Champions League'] },
     notifications: { briefings:true, lineups:true, live:true, replay:true, weekly:true, patterns:true },
-    account: { mode:'guest', email:null, synced:false },
-    runtime: { mode:'unknown', connected:false, checkedAt:null, lastError:null },
-    installDismissed:false,
-    activeDate:'today',
-    activeFilter:'for-you'
+    account: { mode:'guest', email:null, synced:false }, runtime: { mode:'unknown', connected:false, checkedAt:null, lastError:null },
+    installDismissed:false, activeDate:'today', activeFilter:'for-you'
   };
-  N.i18n = {
-    ru: { hello:'Привет, Богдан', dailyBrief:'DAILY INTELLIGENCE BRIEF' },
-    ua: { hello:'Привіт, Богдане', dailyBrief:'DAILY INTELLIGENCE BRIEF' },
-    en: { hello:'Hello, Bohdan', dailyBrief:'DAILY INTELLIGENCE BRIEF' }
-  };
+  N.i18n = { ru:{hello:'Привет, Богдан',dailyBrief:'DAILY INTELLIGENCE BRIEF'}, ua:{hello:'Привіт, Богдане',dailyBrief:'DAILY INTELLIGENCE BRIEF'}, en:{hello:'Hello, Bohdan',dailyBrief:'DAILY INTELLIGENCE BRIEF'} };
 })();
