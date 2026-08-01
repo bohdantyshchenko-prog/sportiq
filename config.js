@@ -2,15 +2,15 @@
   'use strict';
   const N = window.NOVIQ = window.NOVIQ || {};
   N.config = {
-    version: '1.2',
+    version: '1.2.1',
     storageKey: 'noviq-v1.2-state',
     legacyKeys: ['noviq-v1.1-state', 'noviq-v1-state'],
     demoMode: true,
     provider: 'NOVIQ Demo Sports Gateway',
-    buildDate: '2026-07-31'
+    buildDate: '2026-08-01'
   };
   N.defaultState = {
-    version: '1.2', language: 'ru', theme: 'dark', sportsIQ: 8542,
+    version: '1.2.1', language: 'ru', theme: 'dark', sportsIQ: 8542,
     skills: { tactical: 89, context: 74, data: 78, decision: 81, learning: 86 },
     skillTrust: { tactical: 82, context: 69, data: 72, decision: 77, learning: 80 },
     calibration: {
