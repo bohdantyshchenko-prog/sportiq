@@ -13,10 +13,16 @@
     } catch { return null; }
   };
 
-  const save = session => {
-    N.session = session ? { accessToken: session.access_token, refreshToken: session.refresh_token, expiresAt: Date.now() + Number(session.expires_in || 0) * 1000, user: session.user || null } : null;
-    if (N.session) localStorage.setItem(storageKey, JSON.stringify(N.session)); else localStorage.removeItem(storageKey);
-    window.dispatchEvent(new CustomEvent('noviq:auth', { detail: { session: N.session } }));
+  const save = payload => {
+    if (!payload?.access_token) {
+      N.session = null;
+      localStorage.removeItem(storageKey);
+      window.dispatchEvent(new CustomEvent('noviq:auth', { detail: { session: null, pendingConfirmation: Boolean(payload?.user) } }));
+      return null;
+    }
+    N.session = { accessToken: payload.access_token, refreshToken: payload.refresh_token, expiresAt: Date.now() + Number(payload.expires_in || 0) * 1000, user: payload.user || null };
+    localStorage.setItem(storageKey, JSON.stringify(N.session));
+    window.dispatchEvent(new CustomEvent('noviq:auth', { detail: { session: N.session, pendingConfirmation: false } }));
     return N.session;
   };
 
@@ -24,7 +30,7 @@
     if (!supabaseUrl || !anonKey) throw new Error('SUPABASE_NOT_CONFIGURED');
     const response = await fetch(`${supabaseUrl}/auth/v1${path}`, {
       method: options.method || 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}`, 'Content-Type': 'application/json' },
+      headers: { apikey: anonKey, Authorization: `Bearer ${options.token || anonKey}`, 'Content-Type': 'application/json' },
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: AbortSignal.timeout(10_000)
     });
@@ -38,23 +44,25 @@
     restore() {
       try {
         const stored = JSON.parse(localStorage.getItem(storageKey) || 'null');
-        N.session = stored && stored.accessToken ? stored : null;
+        N.session = stored && stored.accessToken && stored.refreshToken ? stored : null;
       } catch { N.session = null; }
       return N.session;
     },
-    async signIn(email, password) { return save(await request('/token?grant_type=password', { body: { email, password } })); },
-    async signUp(email, password) { return save(await request('/signup', { body: { email, password } })); },
+    async signIn(email, password) { return save(await request('/token?grant_type=password', { body: { email: String(email).trim().toLowerCase(), password } })); },
+    async signUp(email, password) {
+      const payload = await request('/signup', { body: { email: String(email).trim().toLowerCase(), password } });
+      return { session: save(payload), user: payload.user || null, pendingConfirmation: !payload.access_token };
+    },
     async refresh(force = false) {
       const session = N.session || this.restore();
       if (!session?.refreshToken) return null;
       if (!force && session.expiresAt - Date.now() > 60_000) return session;
-      return save(await request('/token?grant_type=refresh_token', { body: { refresh_token: session.refreshToken } }));
+      try { return save(await request('/token?grant_type=refresh_token', { body: { refresh_token: session.refreshToken } })); }
+      catch (error) { if (error?.status === 400 || error?.status === 401) save(null); throw error; }
     },
     async signOut() {
       const token = N.session?.accessToken;
-      if (token && this.configured()) {
-        await fetch(`${supabaseUrl}/auth/v1/logout`, { method: 'POST', headers: { apikey: anonKey, Authorization: `Bearer ${token}` } }).catch(() => undefined);
-      }
+      if (token && this.configured()) await request('/logout', { token }).catch(() => undefined);
       save(null);
     },
     user() { return N.session?.user || decodePayload(N.session?.accessToken || '') || null; }
