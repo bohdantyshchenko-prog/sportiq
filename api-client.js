@@ -29,13 +29,13 @@
       const method = options.method || 'GET';
       const retries = Number.isInteger(options.retries) ? options.retries : 1;
       const timeoutMs = options.timeoutMs || N.config.requestTimeoutMs || 8000;
-      const headers = { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) };
-      const token = N.session?.accessToken;
-      if (token) headers.Authorization = `Bearer ${token}`;
-
+      let authRefreshAttempted = Boolean(options.authRefreshAttempted);
       let lastError;
+
       for (let attempt = 0; attempt <= retries; attempt += 1) {
         try {
+          const headers = { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) };
+          if (N.session?.accessToken) headers.Authorization = `Bearer ${N.session.accessToken}`;
           const response = await withTimeout(signal => fetch(`${baseUrl}${path}`, {
             method,
             headers,
@@ -45,6 +45,14 @@
           }), timeoutMs);
           const contentType = response.headers.get('content-type') || '';
           const payload = contentType.includes('application/json') ? await response.json() : await response.text();
+
+          if (response.status === 401 && !authRefreshAttempted && N.auth?.configured?.() && N.session?.refreshToken) {
+            authRefreshAttempted = true;
+            await N.auth.refresh(true);
+            attempt -= 1;
+            continue;
+          }
+
           if (!response.ok) {
             throw new ApiError(payload?.message || payload?.error || `Request failed with ${response.status}`, {
               status: response.status,

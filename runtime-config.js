@@ -3,5 +3,7 @@ window.NOVIQ_RUNTIME_CONFIG = {
   apiBaseUrl: '',
   provider: 'NOVIQ Platform Gateway',
   requestTimeoutMs: 8000,
-  vapidPublicKey: ''
+  vapidPublicKey: '',
+  supabaseUrl: '',
+  supabaseAnonKey: ''
 };
