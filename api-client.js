@@ -9,14 +9,15 @@
       this.status = details.status || 0;
       this.code = details.code || 'API_ERROR';
       this.retryable = Boolean(details.retryable);
+      this.requestId = details.requestId || '';
     }
   }
 
   const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const withTimeout = (promise, timeoutMs) => {
+  const withTimeout = (factory, timeoutMs) => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    return { controller, promise: promise(controller.signal).finally(() => clearTimeout(timeout)) };
+    return factory(controller.signal).finally(() => clearTimeout(timeout));
   };
 
   N.api = {
@@ -35,21 +36,21 @@
       let lastError;
       for (let attempt = 0; attempt <= retries; attempt += 1) {
         try {
-          const timed = withTimeout(signal => fetch(`${baseUrl}${path}`, {
+          const response = await withTimeout(signal => fetch(`${baseUrl}${path}`, {
             method,
             headers,
             body: options.body ? JSON.stringify(options.body) : undefined,
             credentials: 'omit',
             signal
           }), timeoutMs);
-          const response = await timed.promise;
           const contentType = response.headers.get('content-type') || '';
           const payload = contentType.includes('application/json') ? await response.json() : await response.text();
           if (!response.ok) {
-            throw new ApiError(payload?.message || `Request failed with ${response.status}`, {
+            throw new ApiError(payload?.message || payload?.error || `Request failed with ${response.status}`, {
               status: response.status,
-              code: payload?.code || 'HTTP_ERROR',
-              retryable: response.status >= 500 || response.status === 429
+              code: payload?.code || payload?.error || 'HTTP_ERROR',
+              retryable: response.status >= 500 || response.status === 429,
+              requestId: response.headers.get('x-request-id') || ''
             });
           }
           return payload;
@@ -57,20 +58,24 @@
           lastError = error?.name === 'AbortError'
             ? new ApiError('Request timed out', { code: 'TIMEOUT', retryable: true })
             : error;
-          if (attempt >= retries || !lastError.retryable) break;
-          await sleep(250 * (attempt + 1));
+          if (attempt >= retries || !lastError?.retryable) break;
+          await sleep(300 * (2 ** attempt));
         }
       }
       throw lastError;
     },
-    health() { return this.request('/v1/health', { retries: 0, timeoutMs: 3000 }); },
+    health() { return this.request('/health', { retries: 0, timeoutMs: 3000 }); },
+    readiness() { return this.request('/ready', { retries: 0, timeoutMs: 3000 }); },
+    me() { return this.request('/v1/me'); },
     matches(params = {}) {
       const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value != null && value !== '')).toString();
       return this.request(`/v1/matches${query ? `?${query}` : ''}`);
     },
     match(id) { return this.request(`/v1/matches/${encodeURIComponent(id)}`); },
-    briefing(matchId) { return this.request(`/v1/matches/${encodeURIComponent(matchId)}/briefing`, { method: 'POST' }); },
-    reviewThesis(thesis) { return this.request('/v1/ai/thesis-review', { method: 'POST', body: { thesis } }); },
-    ask(question, context = {}) { return this.request('/v1/ai/ask', { method: 'POST', body: { question, context } }); }
+    briefing(matchId, locale = 'ru') { return this.request('/v1/ai/briefing', { method: 'POST', body: { matchId, locale } }); },
+    createThesis(thesis) { return this.request('/v1/theses', { method: 'POST', body: thesis }); },
+    reviewThesis(thesis) { return this.request('/v1/ai/review-thesis', { method: 'POST', body: thesis }); },
+    ask(question, context = {}) { return this.request('/v1/ai/ask', { method: 'POST', body: { question, context } }); },
+    subscribePush(subscription) { return this.request('/v1/push/subscribe', { method: 'POST', body: subscription }); }
   };
 })();
