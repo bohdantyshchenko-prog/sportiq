@@ -1,9 +1,12 @@
 name: NOVIQ Screenshot
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/noviq-2-platform
+      - main
+    paths-ignore:
+      - 'backend/**'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
