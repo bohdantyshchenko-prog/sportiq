@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id             String   @id @db.Uuid
+  email          String   @unique
+  displayName    String?
+  locale         String   @default("ru")
+  theme          String   @default("dark")
+  sportsIQ       Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  theses         Thesis[]
+  memories       Memory[]
+  pushDevices    PushDevice[]
+}
+
+model Match {
+  id             String   @id
+  provider       String
+  providerMatchId String
+  tournament     String
+  homeTeam       String
+  awayTeam       String
+  startsAt       DateTime
+  status         String
+  payload        Json
+  updatedAt      DateTime @updatedAt
+  theses         Thesis[]
+
+  @@unique([provider, providerMatchId])
+  @@index([startsAt])
+}
+
+model Thesis {
+  id          String   @id @default(uuid()) @db.Uuid
+  profileId   String   @db.Uuid
+  matchId     String
+  scenario    String
+  reason      String
+  risk        String
+  alternative String?
+  confidence  Int
+  lockedAt    DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  replay      Replay?
+
+  @@index([profileId, createdAt])
+}
+
+model Replay {
+  id          String   @id @default(uuid()) @db.Uuid
+  thesisId    String   @unique @db.Uuid
+  outcome     String
+  reflection  String
+  score       Int
+  evidence    Json
+  createdAt   DateTime @default(now())
+  thesis      Thesis   @relation(fields: [thesisId], references: [id], onDelete: Cascade)
+}
+
+model Memory {
+  id          String   @id @default(uuid()) @db.Uuid
+  profileId   String   @db.Uuid
+  kind        String
+  title       String
+  summary     String
+  confidence  Int
+  evidence    Json
+  createdAt   DateTime @default(now())
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+}
+
+model PushDevice {
+  id          String   @id @default(uuid()) @db.Uuid
+  profileId   String   @db.Uuid
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
