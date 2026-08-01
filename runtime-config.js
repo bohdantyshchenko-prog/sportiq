@@ -1,6 +1,7 @@
 window.NOVIQ_RUNTIME_CONFIG = {
   demoMode: true,
   apiBaseUrl: '',
-  provider: 'NOVIQ Demo Sports Gateway',
-  requestTimeoutMs: 8000
+  provider: 'NOVIQ Platform Gateway',
+  requestTimeoutMs: 8000,
+  vapidPublicKey: ''
 };

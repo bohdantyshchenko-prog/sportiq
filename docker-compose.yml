@@ -1,0 +1,31 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: noviq
+      POSTGRES_USER: noviq
+      POSTGRES_PASSWORD: noviq
+    ports:
+      - "5432:5432"
+    volumes:
+      - noviq-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noviq -d noviq"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  backend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run prisma:generate && npm run dev"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  noviq-postgres:
