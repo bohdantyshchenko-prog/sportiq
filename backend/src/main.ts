@@ -42,7 +42,7 @@ declare module 'fastify' { interface FastifyRequest { user: { id: string; email:
 
 const sportsRequest = async (path: string) => {
   const response = await fetch(`${env.FOOTBALL_DATA_BASE_URL}${path}`, { headers: { 'X-Auth-Token': env.FOOTBALL_DATA_TOKEN, Accept: 'application/json' }, signal: AbortSignal.timeout(8_000) });
-  if (!response.ok) { const error = new Error(`SPORTS_PROVIDER_${response.status}`); (error as any).statusCode = response.status === 429 ? 503 : 502; throw error; }
+  if (!response.ok) { const providerError = new Error(`SPORTS_PROVIDER_${response.status}`); (providerError as Error & { statusCode?: number }).statusCode = response.status === 429 ? 503 : 502; throw providerError; }
   return response.json() as Promise<Record<string, unknown>>;
 };
 
@@ -54,7 +54,6 @@ const normalizeMatch = (match: any): Prisma.MatchUncheckedCreateInput => ({
 
 app.get('/health', async () => ({ status: 'ok', version: '3.1.0', time: new Date().toISOString() }));
 app.get('/ready', async (_request, reply) => { try { await prisma.$queryRaw`SELECT 1`; return { status: 'ready' }; } catch { return reply.code(503).send({ status: 'not_ready' }); } });
-
 app.get('/v1/me', async request => prisma.profile.upsert({ where: { id: request.user.id }, update: { email: request.user.email }, create: { id: request.user.id, email: request.user.email } }));
 
 app.get('/v1/matches', async request => {
@@ -68,7 +67,6 @@ app.get('/v1/matches', async request => {
 });
 
 app.get('/v1/matches/:id', async (request, reply) => { const { id } = z.object({ id: z.string().min(1) }).parse(request.params); const match = await prisma.match.findUnique({ where: { id } }); return match ?? reply.code(404).send({ error: 'MATCH_NOT_FOUND' }); });
-
 const thesisSchema = z.object({ matchId:z.string().min(1), scenario:z.string().min(20).max(1200), reason:z.string().min(20).max(1200), risk:z.string().min(10).max(800), alternative:z.string().max(800).optional(), confidence:z.number().int().min(1).max(99) });
 app.post('/v1/theses', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async request => prisma.thesis.create({ data: { ...thesisSchema.parse(request.body), profileId: request.user.id } }));
 
@@ -81,7 +79,13 @@ app.post('/v1/ai/briefing', { config: { rateLimit: { max: 12, timeWindow: '1 min
 
 app.post('/v1/push/subscribe', async request => { const s=z.object({endpoint:z.string().url(),keys:z.object({p256dh:z.string().min(1),auth:z.string().min(1)}),userAgent:z.string().max(500).optional()}).parse(request.body); return prisma.pushDevice.upsert({where:{endpoint:s.endpoint},update:{profileId:request.user.id,p256dh:s.keys.p256dh,auth:s.keys.auth,userAgent:s.userAgent},create:{profileId:request.user.id,endpoint:s.endpoint,p256dh:s.keys.p256dh,auth:s.keys.auth,userAgent:s.userAgent}}); });
 
-app.setErrorHandler((error,_request,reply) => { app.log.error(error); if(error instanceof z.ZodError)return reply.code(400).send({error:'VALIDATION_ERROR',details:error.flatten()}); const status=Number((error as any).statusCode)||500; return reply.code(status).send({error:status===500?'INTERNAL_ERROR':error.message}); });
+app.setErrorHandler((error,_request,reply) => {
+  app.log.error(error);
+  if(error instanceof z.ZodError) return reply.code(400).send({error:'VALIDATION_ERROR',details:error.flatten()});
+  const status = Number((error as { statusCode?: number }).statusCode) || 500;
+  const message = error instanceof Error ? error.message : 'REQUEST_FAILED';
+  return reply.code(status).send({error:status===500?'INTERNAL_ERROR':message});
+});
 
 const shutdown = async (signal:string) => { app.log.info({signal},'Shutting down'); await app.close(); await prisma.$disconnect(); process.exit(0); };
 process.once('SIGTERM',()=>void shutdown('SIGTERM')); process.once('SIGINT',()=>void shutdown('SIGINT'));
