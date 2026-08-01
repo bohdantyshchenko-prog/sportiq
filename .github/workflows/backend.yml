@@ -1,0 +1,54 @@
+name: NOVIQ Backend
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://noviq:noviq@localhost:5432/noviq
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: noviq
+          POSTGRES_USER: noviq
+          POSTGRES_PASSWORD: noviq
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U noviq -d noviq"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm install --no-audit --no-fund
+      - name: Validate Prisma schema
+        working-directory: backend
+        run: npx prisma validate
+      - name: Apply production migrations
+        working-directory: backend
+        run: npx prisma migrate deploy
+      - name: Build and test
+        working-directory: backend
+        run: npm run check
+      - name: Build production container
+        run: docker build -t noviq-backend:ci ./backend
