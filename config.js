@@ -3,9 +3,9 @@
   const N = window.NOVIQ = window.NOVIQ || {};
   const runtime = window.NOVIQ_RUNTIME_CONFIG || {};
   N.config = {
-    version: '2.0.0',
-    storageKey: 'noviq-v2-state',
-    legacyKeys: ['noviq-v1.4-state', 'noviq-v1.2-state', 'noviq-v1.1-state', 'noviq-v1-state'],
+    version: '3.2.0',
+    storageKey: 'noviq-v3.2-state',
+    legacyKeys: ['noviq-v2-state', 'noviq-v1.4-state', 'noviq-v1.2-state', 'noviq-v1.1-state', 'noviq-v1-state'],
     demoMode: runtime.demoMode !== false,
     apiBaseUrl: String(runtime.apiBaseUrl || '').trim(),
     requestTimeoutMs: Number(runtime.requestTimeoutMs) || 8000,
@@ -13,7 +13,7 @@
     buildDate: '2026-08-01'
   };
   N.defaultState = {
-    version: '2.0.0', language: 'ru', theme: 'dark', sportsIQ: 8542,
+    version: '3.2.0', language: 'ru', theme: 'dark', sportsIQ: 8542,
     skills: { tactical: 89, context: 74, data: 78, decision: 81, learning: 86 },
     skillTrust: { tactical: 82, context: 69, data: 72, decision: 77, learning: 80 },
     calibration: {
