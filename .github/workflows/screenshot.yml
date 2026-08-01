@@ -1,0 +1,42 @@
+name: NOVIQ Screenshot
+
+on:
+  push:
+    branches:
+      - agent/noviq-2-platform
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright Chromium
+        run: npx -y playwright@1.52.0 install --with-deps chromium
+      - name: Start NOVIQ
+        run: |
+          python3 -m http.server 4173 > /tmp/noviq-server.log 2>&1 &
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/noviq-server.log
+          exit 1
+      - name: Capture real mobile render
+        run: |
+          npx -y playwright@1.52.0 screenshot \
+            --device="iPhone 13" \
+            --full-page \
+            --wait-for-timeout=2500 \
+            http://127.0.0.1:4173/ noviq-live-iphone.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noviq-live-screenshot
+          path: noviq-live-iphone.png
+          if-no-files-found: error
