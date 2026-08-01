@@ -31,6 +31,7 @@
       tournaments: Array.isArray(saved?.favorites?.tournaments) ? saved.favorites.tournaments : N.defaultState.favorites.tournaments
     },
     account: { ...N.defaultState.account, ...(saved?.account || {}) },
+    runtime: { ...N.defaultState.runtime, ...(saved?.runtime || {}) },
     patterns: Array.isArray(saved?.patterns) ? saved.patterns : N.defaultState.patterns,
     decisions: Array.isArray(saved?.decisions) ? saved.decisions : N.defaultState.decisions,
     liveNotes: Array.isArray(saved?.liveNotes) ? saved.liveNotes : [],
@@ -45,9 +46,7 @@
           const raw = localStorage.getItem(key);
           if (!raw) continue;
           const state = mergeState(JSON.parse(raw));
-          if (key !== N.config.storageKey) {
-            localStorage.setItem(N.config.storageKey, JSON.stringify(state));
-          }
+          if (key !== N.config.storageKey) localStorage.setItem(N.config.storageKey, JSON.stringify(state));
           return state;
         } catch (error) {
           console.warn(`NOVIQ could not read state from ${key}`, error);
@@ -66,25 +65,79 @@
     }
   };
 
+  const demoBriefing = match => ({
+    facts:['Матч и время взяты из демонстрационного набора NOVIQ.','Стартовые составы пока не подтверждены внешним провайдером.'],
+    signals:[`${match.home} вероятнее будет задавать базовую структуру владения.`,`${match.away} опаснее при изменении темпа и переходах.`],
+    unknowns:['Подтверждённые составы','Свежие медицинские данные','Погодные условия'],
+    change:'До получения составов не поднимай уверенность выше 70%.', confidence:'medium', sourceMode:'demo'
+  });
+
+  N.runtime = {
+    async check() {
+      if (!N.config.apiBaseUrl || N.config.demoMode) {
+        N.state.runtime = { mode:'demo', connected:false, checkedAt:N.util.now(), lastError:null };
+        N.storage.save();
+        return N.state.runtime;
+      }
+      try {
+        await N.api.health();
+        N.state.runtime = { mode:'remote', connected:true, checkedAt:N.util.now(), lastError:null };
+      } catch (error) {
+        N.state.runtime = { mode:'fallback', connected:false, checkedAt:N.util.now(), lastError:error.code || 'API_ERROR' };
+      }
+      N.storage.save();
+      return N.state.runtime;
+    }
+  };
+
   N.sportsGateway = {
-    mode:'demo',
-    async getMatches(){ return N.util.clone(N.matches); },
-    async getMatch(id){ return N.util.clone(N.matches.find(m=>m.id===id)); },
-    status(){ return { mode:'demo', provider:N.config.provider, updatedAt:N.util.now(), truthful:true, connected:false }; }
+    get mode(){ return N.state?.runtime?.connected ? 'remote' : 'demo'; },
+    async getMatches(params = {}) {
+      if (N.config.apiBaseUrl && !N.config.demoMode) {
+        try {
+          const result = await N.api.matches(params);
+          if (Array.isArray(result?.matches)) return result.matches;
+        } catch (error) {
+          console.warn('Remote sports feed unavailable; using demo data', error);
+        }
+      }
+      return N.util.clone(N.matches);
+    },
+    async getMatch(id) {
+      if (N.config.apiBaseUrl && !N.config.demoMode) {
+        try { return await N.api.match(id); }
+        catch (error) { console.warn('Remote match unavailable; using demo data', error); }
+      }
+      return N.util.clone(N.matches.find(m => m.id === id));
+    },
+    status() {
+      const connected = Boolean(N.state?.runtime?.connected);
+      return {
+        mode: connected ? 'remote' : 'demo',
+        provider: connected ? (N.config.provider || 'NOVIQ API') : 'NOVIQ Demo Sports Gateway',
+        updatedAt: N.state?.runtime?.checkedAt || N.util.now(),
+        truthful:true,
+        connected,
+        fallback: !connected && Boolean(N.config.apiBaseUrl)
+      };
+    }
   };
 
   N.ai = {
-    async briefing(match){
-      await new Promise(r=>setTimeout(r,350));
-      return {
-        facts:['Матч и время взяты из демонстрационного набора 1.2.','Стартовые составы пока не подключены к внешнему провайдеру.'],
-        signals:[`${match.home} вероятнее будет задавать базовую структуру владения.`,`${match.away} опаснее при изменении темпа и переходах.`],
-        unknowns:['Подтверждённые составы','Свежие медицинские данные','Погодные условия'],
-        change:'До получения составов не поднимай уверенность выше 70%.', confidence:'medium'
-      };
+    async briefing(match) {
+      if (N.config.apiBaseUrl && !N.config.demoMode) {
+        try { return await N.api.briefing(match.id); }
+        catch (error) { console.warn('Remote briefing unavailable; using demo analysis', error); }
+      }
+      await new Promise(r => setTimeout(r, 250));
+      return demoBriefing(match);
     },
-    async reviewThesis(thesis){
-      await new Promise(r=>setTimeout(r,280));
+    async reviewThesis(thesis) {
+      if (N.config.apiBaseUrl && !N.config.demoMode) {
+        try { return await N.api.reviewThesis(thesis); }
+        catch (error) { console.warn('Remote thesis review unavailable; using local model', error); }
+      }
+      await new Promise(r=>setTimeout(r,220));
       const scenario=String(thesis?.scenario||'');
       const reason=String(thesis?.reason||'');
       const riskText=String(thesis?.risk||'');
@@ -96,11 +149,16 @@
       return { specificity,evidence,risk,calibration,
         bias:confidence>80?'Overconfidence risk':'No dominant bias detected',
         question:'Какой факт из стартового состава заставит тебя изменить уверенность минимум на 10 пунктов?',
-        alternative:thesis?.alternative||'Соперник переживает стартовое давление и переводит игру в переходный сценарий.' };
+        alternative:thesis?.alternative||'Соперник переживает стартовое давление и переводит игру в переходный сценарий.',
+        sourceMode:'local-fallback' };
     },
-    async ask(question){
-      await new Promise(r=>setTimeout(r,420));
+    async ask(question) {
       const safeQuestion=String(question||'').slice(0,600);
+      if (N.config.apiBaseUrl && !N.config.demoMode) {
+        try { return await N.api.ask(safeQuestion, { sportsIQ:N.state.sportsIQ, patterns:N.state.patterns.slice(0,5) }); }
+        catch (error) { console.warn('Remote AI unavailable; using local response', error); }
+      }
+      await new Promise(r=>setTimeout(r,260));
       if(/увер|confidence/i.test(safeQuestion)) return `Текущая калибровка — ${N.state.calibration.score}%. Главная ошибка находится в диапазоне 80%+: фактическая успешность заметно ниже заявленной.`;
       if(/похож|ошиб|memory/i.test(safeQuestion)) return 'Похожий паттерн был в Inter — Bayern: сильное тактическое чтение, но недостаточный вес стандартов и слишком высокая уверенность.';
       return 'Смотри не только на владение, а на качество продвижения после отбора, структуру rest-defence и пространство за крайними защитниками.';
