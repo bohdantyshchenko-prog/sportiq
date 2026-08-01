@@ -1,5 +1,5 @@
-const CACHE='noviq-1.4.1-premium-2026-08-01';
-const ASSETS=['./','./index.html','./styles.css','./styles-core.css','./styles-components.css','./styles-premium.css','./runtime-config.js','./config.js','./api-client.js','./data.js','./services.js','./compat.js','./ui-part-1.js','./ui-part-2.js','./ui-part-3.js','./ui-mount.js','./app-core.js','./app-thesis.js','./app-live.js','./app-intelligence.js','./app-shell.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='noviq-1.4.2-local-media-2026-08-01';
+const ASSETS=['./','./index.html','./styles.css','./styles-core.css','./styles-components.css','./styles-premium.css','./styles-assets.css','./runtime-config.js','./config.js','./api-client.js','./data.js','./services.js','./compat.js','./ui-part-1.js','./ui-part-2.js','./ui-part-3.js','./ui-mount.js','./app-core.js','./app-thesis.js','./app-live.js','./app-intelligence.js','./app-shell.js','./manifest.webmanifest','./icon.svg','./assets/profile-bt.svg','./assets/hero-athlete.svg','./assets/stadium-night.svg'];
 
 self.addEventListener('install',event=>event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())
