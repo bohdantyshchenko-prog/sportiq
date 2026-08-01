@@ -1,5 +1,5 @@
-const CACHE='noviq-1.2.1-2026-08-01';
-const ASSETS=['./','./index.html','./styles.css','./styles-core.css','./styles-components.css','./config.js','./data.js','./services.js','./compat.js','./ui-part-1.js','./ui-part-2.js','./ui-part-3.js','./ui-mount.js','./app-core.js','./app-thesis.js','./app-live.js','./app-intelligence.js','./app-shell.js','./manifest.webmanifest','./icon.svg'];
+const CACHE='noviq-1.4.0-2026-08-01';
+const ASSETS=['./','./index.html','./styles.css','./styles-core.css','./styles-components.css','./runtime-config.js','./config.js','./api-client.js','./data.js','./services.js','./compat.js','./ui-part-1.js','./ui-part-2.js','./ui-part-3.js','./ui-mount.js','./app-core.js','./app-thesis.js','./app-live.js','./app-intelligence.js','./app-shell.js','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>event.waitUntil(
   caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())
@@ -14,6 +14,12 @@ self.addEventListener('activate',event=>event.waitUntil(
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET')return;
   const request=event.request;
+  const url=new URL(request.url);
+  const isApi=url.pathname.includes('/v1/');
+  if(isApi){
+    event.respondWith(fetch(request));
+    return;
+  }
   event.respondWith(
     fetch(request)
       .then(response=>{
