@@ -1,7 +1,7 @@
 {
-  "name": "NOVIQ 1.2 — Sports Intelligence",
+  "name": "NOVIQ 4.0 — Offline Sports Intelligence",
   "short_name": "NOVIQ",
-  "description": "Live Intelligence, Match Thesis, Decision Replay, Sports IQ and Sports Memory.",
+  "description": "Match Thesis, Decision Replay, Sports IQ and Sports Memory in a complete offline-first experience.",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
@@ -9,5 +9,7 @@
   "theme_color": "#07080d",
   "orientation": "portrait-primary",
   "categories": ["sports", "education", "lifestyle"],
+  "lang": "ru",
+  "dir": "ltr",
   "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
