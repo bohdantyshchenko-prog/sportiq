@@ -1,9 +1,7 @@
-window.NOVIQ_RUNTIME_CONFIG = {
+window.NOVIQ_RUNTIME_CONFIG = Object.freeze({
+  edition: 'offline-production',
   demoMode: true,
   apiBaseUrl: '',
-  provider: 'NOVIQ Platform Gateway',
-  requestTimeoutMs: 8000,
-  vapidPublicKey: '',
-  supabaseUrl: '',
-  supabaseAnonKey: ''
-};
+  provider: 'NOVIQ Curated Offline Dataset',
+  requestTimeoutMs: 8000
+});
