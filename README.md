@@ -1,63 +1,45 @@
-# NOVIQ 1.4 — Real-Data-Ready Sports Intelligence
+# NOVIQ 5.1 — Sports Decision Intelligence
 
-NOVIQ develops football reasoning through one measurable loop:
+NOVIQ trains sports reasoning through one clear loop:
 
-**Dynamic Briefing → Match Thesis → Decision Lock → Live Tracking → Decision Replay → Sports IQ → Sports Memory → Recommendation**
+**Diagnostic → AI Briefing → Match Thesis → Decision Replay → Sports IQ**
 
-## What 1.4 adds
+## Current edition
 
-- hardened migration from NOVIQ 1.0, 1.1 and 1.2 local state
-- resilient API client with timeout, retry and structured errors
-- configurable remote sports and AI endpoints
-- automatic demo fallback when the backend is unavailable
-- explicit runtime status for remote, fallback and demo modes
-- service-worker isolation for API requests
-- safer dynamic HTML rendering and local persistence handling
-- automated GitHub Actions smoke checks
+NOVIQ 5.1 is a complete offline-first product edition. It runs without external accounts, paid sports feeds, cloud storage or server AI.
+
+The bundled matches and signals are curated demonstration content. The local AI rules engine challenges evidence, confidence and alternative scenarios; it does not present predictions as facts.
 
 ## Product capabilities
 
-- personal Daily Intelligence Brief
-- Match Center with date, search and purpose filters
-- Dynamic AI Briefing with facts, signals and unknowns
-- Match Thesis V2 with Quick/Expert modes, sources, risk, alternatives and confidence
-- immutable Decision Lock
-- Live Thesis Tracking with separate private notes
-- Decision Replay V2 and required reflection
-- Confidence Lab V2
-- Sports Memory V3 with evidence
-- Recommendation Engine V1
-- Weekly Intelligence Report V2
-- Dark Elite / Light Elite, RU / UA / EN navigation
-- PWA install, offline shell, local migration and JSON export
+- concise first-run onboarding
+- one daily decision on Home
+- Match Center with purpose filters
+- AI Briefing separating facts, signals and unknowns
+- Match Thesis with scenario, evidence, risk and confidence
+- Decision Replay focused on decision quality rather than luck
+- Sports IQ, calibration and personal patterns
+- structured AI Core answers with confidence and source labels
+- RU / UA / EN localization
+- Dark and Light themes
+- validated local persistence and version migration
+- JSON export and validated import
+- offline PWA installation and cache
+- keyboard navigation, focus trapping, skip link and reduced-motion support
 
-## Runtime configuration
+## Architecture
 
-`runtime-config.js` controls whether the client uses demo data or a remote backend:
+The active browser runtime is intentionally small:
 
-```js
-window.NOVIQ_RUNTIME_CONFIG = {
-  demoMode: false,
-  apiBaseUrl: 'https://api.example.com',
-  provider: 'NOVIQ Sports API',
-  requestTimeoutMs: 8000
-};
-```
+- `runtime-config.js`
+- `config.js`
+- `bootstrap-v5.js`
+- `data.js`
+- `services.js`
+- `app-v5.js`
+- `styles-v5.css`
 
-Expected endpoints:
-
-- `GET /v1/health`
-- `GET /v1/matches`
-- `GET /v1/matches/:id`
-- `POST /v1/matches/:id/briefing`
-- `POST /v1/ai/thesis-review`
-- `POST /v1/ai/ask`
-
-Do not place provider or OpenAI secrets in `runtime-config.js`. All secrets belong on the server.
-
-## Truthful product status
-
-NOVIQ 1.4 is a functional front-end prototype and an integration-ready client. The repository does not include paid sports-provider credentials, a deployed backend, real authentication, cloud sync or production push notifications. When a backend is not configured or becomes unavailable, the interface clearly falls back to demo data.
+Older experimental UI files remain in repository history but are not loaded by the application.
 
 ## Run locally
 
@@ -67,14 +49,18 @@ python3 -m http.server 8080
 
 Open `http://localhost:8080`.
 
-## Quality checks
+## Quality gates
 
 ```bash
 node tests/smoke.mjs
 ```
 
-GitHub Actions runs the same smoke checks on pull requests and pushes to `main`.
+Pull requests also run:
 
-## Deploy
+- NOVIQ Quality — syntax, runtime assets, migration and product constraints
+- NOVIQ Screenshot — real mobile Chromium render
+- NOVIQ E2E — onboarding → diagnostic → briefing → thesis → replay → AI
 
-GitHub Pages deploys automatically from `main` through `.github/workflows/pages.yml` after Pages is configured to use **GitHub Actions**.
+## Product boundary
+
+NOVIQ 5.1 does not claim live scores, real provider data, cloud sync, push delivery or server-generated AI. Those systems can be connected later through isolated adapters without changing the current offline product loop.

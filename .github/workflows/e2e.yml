@@ -1,0 +1,64 @@
+name: NOVIQ E2E
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'backend/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decision-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright Chromium
+        run: |
+          npm init -y
+          npm install playwright@1.52.0
+          npx playwright install --with-deps chromium
+      - name: Start NOVIQ
+        run: |
+          python3 -m http.server 4173 > /tmp/noviq-server.log 2>&1 &
+          for i in {1..20}; do
+            curl -fsS http://127.0.0.1:4173/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/noviq-server.log
+          exit 1
+      - name: Run first-user decision loop
+        run: |
+          node --input-type=module <<'EOF'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({ headless: true });
+          const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+          const page = await context.newPage();
+          await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+          await page.getByTestId('start-onboarding').click();
+          await page.locator('[data-action="diagnostic"][data-value="70"]').click();
+          await page.getByTestId('continue-loop').click();
+          await page.getByTestId('briefing').waitFor();
+          await page.locator('[data-action="thesis"]').last().click();
+          await page.locator('#scenario').fill('City controls possession and creates overloads in the right half-space.');
+          await page.locator('#reason').fill('The midfield structure gives City an extra passing lane during progression.');
+          await page.locator('#risk').fill('Madrid can break the press and attack the space behind the fullbacks.');
+          await page.getByTestId('save-thesis').click();
+          await page.getByTestId('continue-loop').click();
+          await page.getByTestId('replay').waitFor();
+          const before = await page.locator('#sportsIq').textContent();
+          await page.locator('[data-action="complete-replay"]').click();
+          const after = await page.locator('#sportsIq').textContent();
+          if (before === after) throw new Error('Sports IQ did not change after Replay');
+          await page.locator('[data-nav="ai"]').click();
+          await page.locator('#aiQuestion').fill('Why might my confidence be too high?');
+          await page.locator('[data-action="ask"]').click();
+          await page.locator('#aiResult .ai-answer').waitFor();
+          await browser.close();
+          EOF
