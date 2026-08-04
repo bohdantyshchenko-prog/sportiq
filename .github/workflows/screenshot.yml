@@ -20,11 +20,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      - name: Install pinned test dependencies
+        run: npm install --ignore-scripts
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
       - name: Install Playwright Chromium
-        run: |
-          npm init -y
-          npm install playwright@1.52.0
-          npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
       - name: Start NOVIQ
         run: |
           python3 -m http.server 4173 > /tmp/noviq-server.log 2>&1 &
