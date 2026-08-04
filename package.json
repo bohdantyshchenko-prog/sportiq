@@ -4,11 +4,12 @@
   "version": "5.2.0",
   "type": "module",
   "scripts": {
+    "audit": "npm audit --audit-level=high",
     "test:smoke": "node tests/smoke.mjs",
     "test:e2e": "playwright test",
-    "test": "npm run test:smoke && npm run test:e2e"
+    "test": "npm run audit && npm run test:smoke && npm run test:e2e"
   },
   "devDependencies": {
-    "@playwright/test": "1.52.0"
+    "@playwright/test": "1.61.1"
   }
 }
