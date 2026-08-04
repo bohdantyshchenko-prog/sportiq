@@ -1,15 +1,15 @@
 {
-  "name": "NOVIQ 5.1 — Sports Decision Intelligence",
+  "name": "NOVIQ 5.2 — Sports Decision Intelligence",
   "short_name": "NOVIQ",
-  "description": "Build a Match Thesis, review decisions and improve Sports IQ in an offline-first experience.",
+  "description": "Build durable Match Theses, complete Decision Replays and improve calibrated Sports IQ offline.",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#08090b",
-  "theme_color": "#08090b",
+  "background_color": "#090b0f",
+  "theme_color": "#090b0f",
   "orientation": "portrait-primary",
   "categories": ["sports", "education", "lifestyle"],
-  "lang": "ru",
+  "lang": "en",
   "dir": "ltr",
   "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
