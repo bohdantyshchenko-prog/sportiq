@@ -14,16 +14,20 @@ permissions:
 jobs:
   decision-loop:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Playwright Chromium
-        run: |
-          npm init -y
-          npm install playwright@1.52.0
-          npx playwright install --with-deps chromium
+          cache: npm
+      - name: Install locked test dependencies
+        run: npm install
+      - name: Install browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Start NOVIQ
         run: |
           python3 -m http.server 4173 > /tmp/noviq-server.log 2>&1 &
@@ -33,29 +37,38 @@ jobs:
           done
           cat /tmp/noviq-server.log
           exit 1
-      - name: Run first-user decision loop
+      - name: Run persisted decision loop
+        env:
+          BROWSER: ${{ matrix.browser }}
         run: |
           node --input-type=module <<'EOF'
-          import { chromium } from 'playwright';
-          const browser = await chromium.launch({ headless: true });
+          import { chromium, webkit } from 'playwright';
+          const type = process.env.BROWSER === 'webkit' ? webkit : chromium;
+          const browser = await type.launch({ headless: true });
           const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
           const page = await context.newPage();
           await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
           await page.getByTestId('start-onboarding').click();
           await page.locator('[data-action="diagnostic"][data-value="70"]').click();
+          await page.reload({ waitUntil: 'networkidle' });
+          if (await page.getByTestId('start-onboarding').count()) throw new Error('Onboarding did not persist');
           await page.getByTestId('continue-loop').click();
           await page.getByTestId('briefing').waitFor();
           await page.locator('[data-action="thesis"]').last().click();
-          await page.locator('#scenario').fill('City controls possession and creates overloads in the right half-space.');
-          await page.locator('#reason').fill('The midfield structure gives City an extra passing lane during progression.');
-          await page.locator('#risk').fill('Madrid can break the press and attack the space behind the fullbacks.');
+          await page.locator('[name="scenario"]').fill('City controls possession and creates overloads in the right half-space.');
+          await page.locator('[name="reason"]').fill('The midfield structure gives City an extra passing lane during progression.');
+          await page.locator('[name="risk"]').fill('Madrid can break the press and attack the space behind the fullbacks.');
           await page.getByTestId('save-thesis').click();
+          await page.reload({ waitUntil: 'networkidle' });
           await page.getByTestId('continue-loop').click();
           await page.getByTestId('replay').waitFor();
-          const before = await page.locator('#sportsIq').textContent();
+          const before = Number((await page.locator('#sportsIq').textContent()).replace(/\D/g,''));
           await page.locator('[data-action="complete-replay"]').click();
-          const after = await page.locator('#sportsIq').textContent();
-          if (before === after) throw new Error('Sports IQ did not change after Replay');
+          const after = Number((await page.locator('#sportsIq').textContent()).replace(/\D/g,''));
+          if (!(after > before)) throw new Error('Sports IQ did not increase after scored Replay');
+          await page.reload({ waitUntil: 'networkidle' });
+          const state = await page.evaluate(() => JSON.parse(localStorage.getItem('noviq-v5.2-state')));
+          if (state.theses.length !== 1 || state.replays.length !== 1 || state.completedReplayIds.length !== 1) throw new Error('Durable history did not persist');
           await page.locator('[data-nav="ai"]').click();
           await page.locator('#aiQuestion').fill('Why might my confidence be too high?');
           await page.locator('[data-action="ask"]').click();
