@@ -23,8 +23,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install test dependencies
-        run: npm install
+          cache: npm
+      - name: Install pinned test dependencies
+        run: npm install --ignore-scripts
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
       - name: Install browser
         run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Start NOVIQ
