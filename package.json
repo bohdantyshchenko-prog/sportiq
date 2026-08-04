@@ -1,0 +1,14 @@
+{
+  "name": "noviq-offline-production",
+  "private": true,
+  "version": "5.2.0",
+  "type": "module",
+  "scripts": {
+    "test:smoke": "node tests/smoke.mjs",
+    "test:e2e": "playwright test",
+    "test": "npm run test:smoke && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.52.0"
+  }
+}
