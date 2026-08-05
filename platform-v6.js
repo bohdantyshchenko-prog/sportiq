@@ -49,6 +49,9 @@
   window.addEventListener('DOMContentLoaded',()=>{
     N.platform.mark('dom-ready');
     requestAnimationFrame(()=>{
+      const version=document.querySelector('.brand span');
+      if(version)version.textContent='6.0';
+      document.documentElement.dataset.release='6.0.0';
       N.platform.mark('first-frame');
       N.platform.track('session_ready',{firstFrameMs:Math.round(N.platform.measure('first-frame','platform-ready','first-frame')),release:RELEASE.version});
     });
