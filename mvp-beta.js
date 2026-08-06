@@ -42,31 +42,37 @@
     }
   }
 
+  function syncBrand() {
+    const version = document.querySelector('.brand span');
+    if (version) version.textContent = '6 MVP';
+  }
+
   function openFeedback() {
     let dialog = document.getElementById('mvpFeedbackDialog');
     if (!dialog) {
       dialog = document.createElement('dialog');
       dialog.id = 'mvpFeedbackDialog';
       dialog.className = 'mvp-dialog';
-      dialog.innerHTML = `<form method="dialog" id="mvpFeedbackForm"><header><h2>${escapeHtml(t('title'))}</h2><button value="cancel" aria-label="${escapeHtml(t('close'))}">×</button></header><label>${escapeHtml(t('value'))}<input name="value" type="range" min="1" max="5" value="4"><output>4/5</output></label><fieldset><legend>${escapeHtml(t('return'))}</legend>${[['yes',t('yes')],['maybe',t('maybe')],['no',t('no')]].map(([v,l])=>`<label class="choice"><input type="radio" name="returnIntent" value="${v}" ${v==='yes'?'checked':''}>${escapeHtml(l)}</label>`).join('')}</fieldset><label>${escapeHtml(t('problem'))}<textarea name="problem" maxlength="700"></textarea></label><button class="primary wide" value="submit">${escapeHtml(t('send'))}</button><p id="mvpFeedbackStatus" role="status" aria-live="polite"></p></form>`;
+      dialog.innerHTML = `<form id="mvpFeedbackForm"><header><h2>${escapeHtml(t('title'))}</h2><button type="button" data-close aria-label="${escapeHtml(t('close'))}">×</button></header><label>${escapeHtml(t('value'))}<input name="value" type="range" min="1" max="5" value="4"><output>4/5</output></label><fieldset><legend>${escapeHtml(t('return'))}</legend>${[['yes',t('yes')],['maybe',t('maybe')],['no',t('no')]].map(([v,l])=>`<label class="choice"><input type="radio" name="returnIntent" value="${v}" ${v==='yes'?'checked':''}>${escapeHtml(l)}</label>`).join('')}</fieldset><label>${escapeHtml(t('problem'))}<textarea name="problem" maxlength="700"></textarea></label><button class="primary wide" type="submit">${escapeHtml(t('send'))}</button><p id="mvpFeedbackStatus" role="status" aria-live="polite"></p></form>`;
       document.body.append(dialog);
-      const range = dialog.querySelector('input[type="range"]');
-      range.addEventListener('input', () => dialog.querySelector('output').textContent = `${range.value}/5`);
-      dialog.addEventListener('close', () => {
-        if (dialog.returnValue !== 'submit') return;
-        const form = dialog.querySelector('form');
+      const form = dialog.querySelector('form');
+      const range = form.querySelector('input[type="range"]');
+      range.addEventListener('input', () => form.querySelector('output').textContent = `${range.value}/5`);
+      dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+      form.addEventListener('submit', event => {
+        event.preventDefault();
         const data = new FormData(form);
         saveFeedback({ value:Number(data.get('value')), returnIntent:data.get('returnIntent'), problem:String(data.get('problem') || '').trim(), at:new Date().toISOString(), release:N.platform?.release?.version || '6.0.0' });
         N.platform?.track?.('beta_feedback_saved',{score:Number(data.get('value')),returnIntent:data.get('returnIntent')});
-        const status = dialog.querySelector('#mvpFeedbackStatus');
+        const status = form.querySelector('#mvpFeedbackStatus');
         status.textContent = t('thanks');
-        setTimeout(() => { status.textContent=''; form.reset(); }, 1800);
+        setTimeout(() => { dialog.close(); status.textContent=''; form.reset(); form.querySelector('output').textContent='4/5'; }, 900);
       });
     }
     dialog.showModal();
   }
 
-  function refresh() { addMission(); addProfileLinks(); }
+  function refresh() { syncBrand(); addMission(); addProfileLinks(); }
   window.addEventListener('DOMContentLoaded', () => setTimeout(refresh, 0));
   document.addEventListener('click', () => setTimeout(refresh, 0), true);
   window.addEventListener('noviq:language-changed', refresh);
