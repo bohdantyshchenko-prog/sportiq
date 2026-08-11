@@ -38,7 +38,7 @@ jobs:
           done
           cat /tmp/noviq-server.log
           exit 1
-      - name: Run persisted decision loop
+      - name: Run persisted decision loop and beta workflow
         env:
           BROWSER: ${{ matrix.browser }}
         run: |
@@ -70,9 +70,21 @@ jobs:
           await page.reload({ waitUntil: 'networkidle' });
           const state = await page.evaluate(() => JSON.parse(localStorage.getItem('noviq-v5.2-state')));
           if (state.theses.length !== 1 || state.replays.length !== 1 || state.completedReplayIds.length !== 1) throw new Error('Durable history did not persist');
+          const beta = await page.evaluate(() => ({ metrics: window.NOVIQ.beta.metrics(), report: window.NOVIQ.beta.report() }));
+          if (!beta.metrics.briefingDays.length || !beta.metrics.thesisDays.length || !beta.metrics.replayDays.length) throw new Error('Beta decision-loop metrics are incomplete');
+          if (beta.report.product.theses !== 1 || beta.report.product.replays !== 1) throw new Error('Beta report does not reflect product history');
           await page.locator('[data-nav="ai"]').click();
           await page.locator('#aiQuestion').fill('Why might my confidence be too high?');
           await page.locator('[data-action="ask"]').click();
           await page.locator('#aiResult .ai-answer').waitFor();
+          await page.locator('[data-nav="profile"]').click();
+          await page.locator('[data-mvp-action="feedback"]').waitFor();
+          await page.locator('[data-mvp-action="feedback"]').click();
+          await page.locator('#mvpFeedbackDialog textarea[name="problem"]').fill('The value is clear; I want more match variety.');
+          await page.locator('#mvpFeedbackForm button[type="submit"]').click();
+          await page.waitForFunction(() => window.NOVIQ.beta.feedback().length === 1);
+          const finalReport = await page.evaluate(() => window.NOVIQ.beta.report());
+          if (finalReport.beta.feedback.length !== 1) throw new Error('Feedback did not reach beta report');
+          if (finalReport.beta.metrics.activeDays.length < 1 || finalReport.beta.metrics.sessions < 1) throw new Error('Retention metrics missing from beta report');
           await browser.close();
           EOF
