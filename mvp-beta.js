@@ -14,7 +14,7 @@
 
   const lang = () => N.state?.language || 'ru';
   const t = key => (copy[lang()] || copy.ru)[key] || key;
-  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const readJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch { return fallback; } };
   const writeJson = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } };
   const today = () => new Date().toISOString().slice(0, 10);
@@ -43,7 +43,23 @@
   function markDay(field) { const day=today(); const values=Array.isArray(metrics[field])?metrics[field]:[]; if(!values.includes(day)) values.push(day); metrics[field]=values.slice(-90); persistMetrics(); }
   function beginSession() { metrics.sessions += 1; markDay('activeDays'); N.platform?.track?.('beta_session_started',{sessions:metrics.sessions,activeDays:metrics.activeDays.length}); }
   function saveFeedback(item) { const rows=feedbackRows(); rows.push(item); writeJson(FEEDBACK_KEY,rows.slice(-50)); }
-  function loopProgress() { const day=today(); return { briefing:metrics.briefingDays.includes(day), thesis:metrics.thesisDays.includes(day), replay:metrics.replayDays.includes(day) }; }
+
+  function reconcileHistory() {
+    const day=today();
+    const theses=Array.isArray(N.state?.theses)?N.state.theses:[];
+    const replays=Array.isArray(N.state?.replays)?N.state.replays:[];
+    if(theses.some(item=>String(item.createdAt||'').startsWith(day))&&!metrics.thesisDays.includes(day)) metrics.thesisDays.push(day);
+    if(replays.some(item=>String(item.completedAt||'').startsWith(day))&&!metrics.replayDays.includes(day)) metrics.replayDays.push(day);
+    const firstReplay=replays.map(item=>item.completedAt).filter(Boolean).sort()[0];
+    const lastReplay=replays.map(item=>item.completedAt).filter(Boolean).sort().at(-1);
+    metrics.firstLoopAt ||= firstReplay || null;
+    if(lastReplay) metrics.lastLoopAt=lastReplay;
+    metrics.thesisDays=metrics.thesisDays.slice(-90);
+    metrics.replayDays=metrics.replayDays.slice(-90);
+    persistMetrics();
+  }
+
+  function loopProgress() { reconcileHistory(); const day=today(); return { briefing:metrics.briefingDays.includes(day), thesis:metrics.thesisDays.includes(day), replay:metrics.replayDays.includes(day) }; }
   function markProductProgress(action) {
     if(action==='briefing') markDay('briefingDays');
     if(action==='thesis') markDay('thesisDays');
@@ -60,7 +76,7 @@
     hero.insertAdjacentElement('afterend',card);
   }
 
-  function betaSummaryMarkup(){ return `<section class="mvp-beta-summary" aria-label="${escapeHtml(t('beta'))}"><div><small>${escapeHtml(t('sessions'))}</small><strong>${metrics.sessions}</strong></div><div><small>${escapeHtml(t('activeDays'))}</small><strong>${metrics.activeDays.length}</strong></div><div><small>${escapeHtml(t('feedbackCount'))}</small><strong>${feedbackRows().length}</strong></div><p>${escapeHtml(t('localOnly'))}</p></section>`; }
+  function betaSummaryMarkup(){ reconcileHistory(); return `<section class="mvp-beta-summary" aria-label="${escapeHtml(t('beta'))}"><div><small>${escapeHtml(t('sessions'))}</small><strong>${metrics.sessions}</strong></div><div><small>${escapeHtml(t('activeDays'))}</small><strong>${metrics.activeDays.length}</strong></div><div><small>${escapeHtml(t('feedbackCount'))}</small><strong>${feedbackRows().length}</strong></div><p>${escapeHtml(t('localOnly'))}</p></section>`; }
 
   function addProfileLinks() {
     const screen=document.querySelector('[data-screen="profile"]'); const settings=screen?.querySelector('.settings'); if(!screen||!settings)return;
@@ -77,6 +93,7 @@
   function syncBrand(){ const version=document.querySelector('.brand span'); if(version)version.textContent='6 MVP'; }
 
   function buildReport() {
+    reconcileHistory();
     const platform=N.platform?.snapshot?.()||null; const state=N.state||{};
     return {
       reportVersion:REPORT_VERSION, generatedAt:now(), release:N.platform?.release||{version:'6.0.0'},
@@ -111,13 +128,14 @@
     if(action==='complete-replay'){ const before=N.state?.replays?.length||0; setTimeout(()=>{ if((N.state?.replays?.length||0)>before){markProductProgress('replay');addMission();} },0); }
   }
 
-  function refresh(){ syncBrand(); addMission(); addProfileLinks(); }
+  function refresh(){ reconcileHistory(); syncBrand(); addMission(); addProfileLinks(); }
 
   beginSession();
+  reconcileHistory();
   window.addEventListener('DOMContentLoaded',()=>setTimeout(refresh,0));
   document.addEventListener('click',event=>{ inferProgressFromClick(event); setTimeout(refresh,0); },true);
   window.addEventListener('noviq:language-changed',refresh);
   window.addEventListener('pagehide',persistMetrics);
 
-  N.beta={ feedback:feedbackRows, metrics:()=>({...metrics}), report:buildReport, refresh };
+  N.beta={ feedback:feedbackRows, metrics:()=>{reconcileHistory();return {...metrics};}, report:buildReport, refresh };
 })();
