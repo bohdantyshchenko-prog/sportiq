@@ -10,15 +10,25 @@
   background:linear-gradient(135deg,var(--mvp-accent-soft),transparent 62%),var(--surface);
   display:grid;
   grid-template-columns:1fr auto;
-  gap:16px;
+  gap:18px;
   align-items:end;
+  transition:border-color .2s ease,transform .2s ease;
 }
+.mvp-mission.complete{border-color:color-mix(in srgb,var(--mvp-accent) 58%,var(--line));}
 .mvp-mission h2{margin:8px 0 6px;font-size:1.15rem}
-.mvp-mission p{margin:0;color:var(--muted);max-width:42ch}
+.mvp-mission p{margin:0;color:var(--muted);max-width:44ch}
 .mvp-badge{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--mvp-accent);color:#111;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.mvp-progress{display:flex;gap:6px;align-items:center}
-.mvp-progress span{width:24px;height:6px;border-radius:999px;background:var(--line)}
-.mvp-progress .done{background:var(--mvp-accent)}
+.mvp-progress{display:flex;gap:10px;align-items:flex-end}
+.mvp-progress-step{display:grid;gap:6px;min-width:64px;color:var(--muted);font-size:.67rem;text-align:center}
+.mvp-progress-step i{display:block;width:100%;height:6px;border-radius:999px;background:var(--line);transition:background .2s ease,transform .2s ease}
+.mvp-progress-step.done{color:var(--text)}
+.mvp-progress-step.done i{background:var(--mvp-accent);transform:scaleY(1.15)}
+.mvp-progress-step b{font-size:.68rem;font-weight:750}
+.mvp-beta-summary{margin:14px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:14px;border:1px solid var(--line);border-radius:22px;background:var(--surface)}
+.mvp-beta-summary>div{display:grid;gap:3px;padding:4px 6px}
+.mvp-beta-summary small{color:var(--muted);font-size:.72rem}
+.mvp-beta-summary strong{font-size:1.22rem;letter-spacing:-.02em}
+.mvp-beta-summary p{grid-column:1/-1;margin:3px 6px 0;color:var(--muted);font-size:.74rem;line-height:1.45}
 .mvp-setting-link{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-radius:18px;background:var(--surface);color:var(--text);text-decoration:none;border:1px solid var(--line);font-weight:700}
 .mvp-setting-link::after{content:'↗';color:var(--muted)}
 .mvp-dialog{width:min(92vw,520px);border:1px solid var(--line);border-radius:26px;background:var(--surface);color:var(--text);padding:0;box-shadow:0 24px 80px rgba(0,0,0,.45)}
@@ -28,8 +38,15 @@
 .mvp-dialog header h2{margin:0;font-size:1.35rem}
 .mvp-dialog header button{width:42px;height:42px;border-radius:50%;font-size:1.4rem}
 .mvp-dialog label,.mvp-dialog fieldset{display:grid;gap:9px;border:0;padding:0;margin:0;font-weight:700}
-.mvp-dialog input[type='range']{width:100%}
-.mvp-dialog textarea{min-height:120px}
+.mvp-dialog input[type='range']{width:100%;accent-color:var(--mvp-accent)}
+.mvp-dialog textarea{min-height:120px;resize:vertical}
 .mvp-dialog .choice{display:flex;grid-template-columns:auto 1fr;align-items:center;gap:8px;font-weight:600}
 .mvp-dialog output{color:var(--muted)}
-@media(max-width:560px){.mvp-mission{grid-template-columns:1fr}.mvp-progress{justify-content:flex-start}.mvp-progress span{flex:1}.mvp-dialog{width:calc(100vw - 24px)}}
+@media(max-width:560px){
+  .mvp-mission{grid-template-columns:1fr}
+  .mvp-progress{width:100%}
+  .mvp-progress-step{flex:1;min-width:0}
+  .mvp-beta-summary{grid-template-columns:repeat(3,1fr)}
+  .mvp-dialog{width:calc(100vw - 24px)}
+}
+@media(prefers-reduced-motion:reduce){.mvp-mission,.mvp-progress-step i{transition:none}}
