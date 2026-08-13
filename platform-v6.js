@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const N = window.NOVIQ = window.NOVIQ || {};
-  const RELEASE = Object.freeze({ version:'6.1.0', channel:'closed-beta', schema:'5.2-compatible+cloud-sync', buildDate:'2026-08-13' });
+  const RELEASE = Object.freeze({ version:'6.1.1', channel:'verified-beta', schema:'5.2-compatible+cloud-sync', buildDate:'2026-08-13' });
   const FLAGS = Object.freeze({ weeklyReport:true, decisionMemory:true, localTelemetry:true, crashRecovery:true, installPrompt:true, cloudIdentity:true, cloudSync:true });
   const MAX_EVENTS = 200, MAX_ERRORS = 50, key = 'noviq-v6-platform';
   const read = () => { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; } };
@@ -16,6 +16,6 @@
   window.addEventListener('unhandledrejection',event=>N.platform.capture(event.reason,{type:'unhandledrejection'}));
   document.addEventListener('visibilitychange',()=>N.platform.track('visibility_change',{state:document.visibilityState}));
   document.addEventListener('click',event=>{const target=event.target.closest?.('[data-action],[data-nav],[data-filter],[data-prelaunch-sync],[data-prelaunch-signin],[data-auth-local]');if(!target)return;N.platform.track('product_action',{action:target.dataset.action||target.dataset.nav||target.dataset.filter||(target.hasAttribute('data-prelaunch-sync')?'cloud_sync':target.hasAttribute('data-auth-local')?'local_preview':'account_signin')});},{capture:true});
-  window.addEventListener('DOMContentLoaded',()=>{N.platform.mark('dom-ready');requestAnimationFrame(()=>{const version=document.querySelector('.brand span');if(version)version.textContent='6.1';const profileButton=document.querySelector('[data-action="profile"].icon-btn');if(profileButton)profileButton.textContent='◎';document.documentElement.dataset.release='6.1.0';N.platform.mark('first-frame');N.platform.track('session_ready',{firstFrameMs:Math.round(N.platform.measure('first-frame','platform-ready','first-frame')),release:RELEASE.version});});});
+  window.addEventListener('DOMContentLoaded',()=>{N.platform.mark('dom-ready');requestAnimationFrame(()=>{const version=document.querySelector('.brand span');if(version)version.textContent='6.1.1';const profileButton=document.querySelector('[data-action="profile"].icon-btn');if(profileButton)profileButton.textContent='◎';document.documentElement.dataset.release='6.1.1';N.platform.mark('first-frame');N.platform.track('session_ready',{firstFrameMs:Math.round(N.platform.measure('first-frame','platform-ready','first-frame')),release:RELEASE.version});});});
   window.addEventListener('online',()=>N.platform.track('network_change',{online:true}));window.addEventListener('offline',()=>N.platform.track('network_change',{online:false}));
 })();
