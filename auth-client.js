@@ -2,73 +2,125 @@
   'use strict';
   const N = window.NOVIQ = window.NOVIQ || {};
   const runtime = window.NOVIQ_RUNTIME_CONFIG || {};
-  const storageKey = 'noviq-auth-session';
+  const STORAGE_KEY = 'noviq-auth-session-v2';
+  const LEGACY_KEY = 'noviq-auth-session';
   const supabaseUrl = String(runtime.supabaseUrl || '').replace(/\/$/, '');
   const anonKey = String(runtime.supabaseAnonKey || '');
+  const appUrl = String(runtime.appUrl || location.origin + location.pathname).replace(/\/$/, '');
 
+  const normalizeEmail = value => String(value || '').trim().toLowerCase();
+  const configured = () => Boolean(supabaseUrl && anonKey);
+  const emit = detail => window.dispatchEvent(new CustomEvent('noviq:auth', { detail }));
   const decodePayload = token => {
     try {
       const body = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(decodeURIComponent(atob(body).split('').map(char => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`).join('')));
+      const pad = body + '='.repeat((4 - body.length % 4) % 4);
+      return JSON.parse(decodeURIComponent(atob(pad).split('').map(char => `%${char.charCodeAt(0).toString(16).padStart(2, '0')}`).join('')));
     } catch { return null; }
   };
-
-  const save = payload => {
-    if (!payload?.access_token) {
-      N.session = null;
-      localStorage.removeItem(storageKey);
-      window.dispatchEvent(new CustomEvent('noviq:auth', { detail: { session: null, pendingConfirmation: Boolean(payload?.user) } }));
-      return null;
-    }
-    N.session = { accessToken: payload.access_token, refreshToken: payload.refresh_token, expiresAt: Date.now() + Number(payload.expires_in || 0) * 1000, user: payload.user || null };
-    localStorage.setItem(storageKey, JSON.stringify(N.session));
-    window.dispatchEvent(new CustomEvent('noviq:auth', { detail: { session: N.session, pendingConfirmation: false } }));
+  const validSession = session => Boolean(session?.accessToken && session?.refreshToken && Number(session.expiresAt) > Date.now() - 86_400_000);
+  const persist = session => {
+    N.session = session || null;
+    if (session) localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    else { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(LEGACY_KEY); }
+    emit({ session: N.session, pendingConfirmation: false });
     return N.session;
   };
-
-  const request = async (path, options = {}) => {
-    if (!supabaseUrl || !anonKey) throw new Error('SUPABASE_NOT_CONFIGURED');
-    const response = await fetch(`${supabaseUrl}/auth/v1${path}`, {
-      method: options.method || 'POST',
-      headers: { apikey: anonKey, Authorization: `Bearer ${options.token || anonKey}`, 'Content-Type': 'application/json' },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      signal: AbortSignal.timeout(10_000)
+  const savePayload = payload => {
+    if (!payload?.access_token) {
+      emit({ session: null, pendingConfirmation: Boolean(payload?.user) });
+      return null;
+    }
+    const decoded = decodePayload(payload.access_token) || {};
+    const expiresAt = decoded.exp ? Number(decoded.exp) * 1000 : Date.now() + Number(payload.expires_in || 3600) * 1000;
+    return persist({
+      version: 2,
+      accessToken: payload.access_token,
+      refreshToken: payload.refresh_token,
+      expiresAt,
+      user: payload.user || { id: decoded.sub, email: decoded.email || null }
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw Object.assign(new Error(payload.msg || payload.error_description || payload.message || 'AUTH_FAILED'), { status: response.status, payload });
-    return payload;
+  };
+  const request = async (path, options = {}) => {
+    if (!configured()) throw Object.assign(new Error('SUPABASE_NOT_CONFIGURED'), { code: 'SUPABASE_NOT_CONFIGURED' });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Number(runtime.requestTimeoutMs || 8000));
+    try {
+      const response = await fetch(`${supabaseUrl}/auth/v1${path}`, {
+        method: options.method || 'POST',
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${options.token || anonKey}`,
+          Accept: 'application/json',
+          ...(options.body ? { 'Content-Type': 'application/json' } : {})
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        credentials: 'omit',
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const code = payload.code || payload.error_code || 'AUTH_FAILED';
+        throw Object.assign(new Error(payload.msg || payload.error_description || payload.message || code), { status: response.status, code });
+      }
+      return payload;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw Object.assign(new Error('AUTH_TIMEOUT'), { code: 'AUTH_TIMEOUT' });
+      throw error;
+    } finally { clearTimeout(timeout); }
   };
 
   N.auth = {
-    configured: () => Boolean(supabaseUrl && anonKey),
+    configured,
     restore() {
-      try {
-        const stored = JSON.parse(localStorage.getItem(storageKey) || 'null');
-        N.session = stored && stored.accessToken && stored.refreshToken ? stored : null;
-      } catch { N.session = null; }
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_KEY) || 'null'); } catch {}
+      if (stored?.access_token) {
+        stored = { version:2, accessToken:stored.access_token, refreshToken:stored.refresh_token, expiresAt:stored.expiresAt, user:stored.user || null };
+      }
+      N.session = validSession(stored) ? stored : null;
+      if (!N.session) { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(LEGACY_KEY); }
       return N.session;
     },
-    async signIn(email, password) { return save(await request('/token?grant_type=password', { body: { email: String(email).trim().toLowerCase(), password } })); },
-    async signUp(email, password) {
-      const payload = await request('/signup', { body: { email: String(email).trim().toLowerCase(), password } });
-      return { session: save(payload), user: payload.user || null, pendingConfirmation: !payload.access_token };
+    async signIn(email, password) {
+      const normalized = normalizeEmail(email);
+      if (!normalized || String(password || '').length < 8) throw Object.assign(new Error('INVALID_CREDENTIAL_INPUT'), { code:'INVALID_CREDENTIAL_INPUT' });
+      return savePayload(await request('/token?grant_type=password', { body:{ email:normalized, password } }));
+    },
+    async signUp(email, password, displayName = '') {
+      const normalized = normalizeEmail(email);
+      if (!normalized || String(password || '').length < 8) throw Object.assign(new Error('PASSWORD_TOO_SHORT'), { code:'PASSWORD_TOO_SHORT' });
+      const payload = await request('/signup', { body:{ email:normalized, password, data:{ display_name:String(displayName || '').trim().slice(0,80) }, email_redirect_to:`${appUrl}?auth=confirmed` } });
+      return { session:savePayload(payload), user:payload.user || null, pendingConfirmation:!payload.access_token };
+    },
+    async recover(email) {
+      const normalized = normalizeEmail(email);
+      if (!normalized) throw Object.assign(new Error('EMAIL_REQUIRED'), { code:'EMAIL_REQUIRED' });
+      await request('/recover', { body:{ email:normalized, redirect_to:`${appUrl}?auth=recovery` } });
+      return true;
     },
     async refresh(force = false) {
       const session = N.session || this.restore();
-      if (!session?.refreshToken) return null;
-      if (!force && session.expiresAt - Date.now() > 60_000) return session;
-      try { return save(await request('/token?grant_type=refresh_token', { body: { refresh_token: session.refreshToken } })); }
-      catch (error) { if (error?.status === 400 || error?.status === 401) save(null); throw error; }
+      if (!session?.refreshToken || !configured()) return session || null;
+      if (!force && session.expiresAt - Date.now() > 120_000) return session;
+      try { return savePayload(await request('/token?grant_type=refresh_token', { body:{ refresh_token:session.refreshToken } })); }
+      catch (error) {
+        if ([400,401,403].includes(Number(error?.status))) persist(null);
+        throw error;
+      }
     },
     async signOut() {
       const token = N.session?.accessToken;
-      if (token && this.configured()) await request('/logout', { token }).catch(() => undefined);
-      save(null);
+      if (token && configured()) await request('/logout', { token }).catch(() => undefined);
+      persist(null);
     },
-    user() { return N.session?.user || decodePayload(N.session?.accessToken || '') || null; }
+    user() { return N.session?.user || decodePayload(N.session?.accessToken || '') || null; },
+    accessToken: async () => (await this.refresh())?.accessToken || null
   };
 
   N.auth.restore();
-  setInterval(() => { if (document.visibilityState === 'visible') N.auth.refresh().catch(() => undefined); }, 45_000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') N.auth.refresh().catch(() => undefined); });
+  const refreshVisible = () => { if (document.visibilityState === 'visible') N.auth.refresh().catch(() => undefined); };
+  setInterval(refreshVisible, 60_000);
+  document.addEventListener('visibilitychange', refreshVisible);
 })();
