@@ -12,3 +12,8 @@
 #identityGate > .identity-gate {
   pointer-events: auto;
 }
+
+/* Author styles must not override the native hidden contract. */
+.identity-panel [hidden] {
+  display: none !important;
+}
