@@ -14,6 +14,8 @@ const auth = read('auth-client.js');
 const api = read('api-client.js');
 const prelaunch = read('prelaunch-v61.js');
 const prelaunchCss = read('prelaunch-v61.css');
+const verifiedCss = read('verified-v611.css');
+const verifiedJs = read('verified-v611.js');
 const headers = read('_headers');
 const privacy = read('privacy.html');
 const terms = read('terms.html');
@@ -33,10 +35,11 @@ assert.deepEqual(scripts, [
   'app-v52.js',
   'a11y-v52.js',
   'mvp-beta.js',
-  'prelaunch-v61.js'
+  'prelaunch-v61.js',
+  'verified-v611.js'
 ]);
-assert.deepEqual(stylesheets, ['styles-v52.css', 'mvp-beta.css', 'prelaunch-v61.css']);
-assert.ok(index.includes('NOVIQ 6.1') && manifest.name.includes('6.1'));
+assert.deepEqual(stylesheets, ['styles-v52.css', 'mvp-beta.css', 'prelaunch-v61.css', 'verified-v611.css']);
+assert.ok(index.includes('NOVIQ 6.1.1') && manifest.name.includes('6.1.1'));
 
 for (const asset of [...scripts, ...stylesheets, 'manifest.webmanifest', 'icon.svg', 'about.html', 'privacy.html', 'terms.html']) {
   assert.ok(fs.existsSync(asset), `missing ${asset}`);
@@ -48,15 +51,17 @@ for (const script of scripts.filter(script => script !== 'runtime-config.js')) {
 
 assert.ok(!sw.includes("'./runtime-config.js'"), 'runtime config must never be precached');
 assert.ok(sw.includes("pathname.startsWith('/v1/')") && sw.includes("pathname==='/runtime-config.js'"), 'network-only API/config policy missing');
-assert.ok(sw.includes("const VERSION='6.1.0'"), 'service-worker version mismatch');
+assert.ok(sw.includes("const VERSION='6.1.1'"), 'service-worker version mismatch');
 
 assert.ok(core.includes('schemaVersion:7') || core.includes('schemaVersion: 7'));
 assert.ok(core.includes("throw new Error('REPLAY_EXISTS')") && core.includes('scoreReplay('));
-assert.ok(platform.includes("version:'6.1.0'") && platform.includes('cloudIdentity:true') && platform.includes('cloudSync:true'));
+assert.ok(platform.includes("version:'6.1.1'") && platform.includes("channel:'verified-beta'") && platform.includes('cloudIdentity:true') && platform.includes('cloudSync:true'));
 assert.ok(app.includes('data-testid="save-thesis"') && app.includes('data-testid="replay"'));
 assert.ok(!app.includes('alert(') && !app.includes('confirm('));
 assert.ok(a11y.includes("child.setAttribute('inert'"));
 assert.ok(styles.includes('prefers-reduced-motion') && styles.includes(':focus-visible'));
+assert.ok(verifiedCss.includes('#identityGate') && verifiedCss.includes('position: fixed'));
+assert.ok(verifiedJs.includes("dataset.release = '6.1.1'"));
 
 for (const token of [
   'async signIn(email, password)',
@@ -94,4 +99,4 @@ assert.ok(headers.includes('Strict-Transport-Security'));
 assert.ok(privacy.includes('Cloud Account') && privacy.includes('Supabase Auth') && privacy.includes('PostgreSQL'));
 assert.ok(terms.includes('Local Preview') && terms.includes('Cloud Account'));
 
-console.log('NOVIQ 6.1 prelaunch structural checks passed.');
+console.log('NOVIQ 6.1.1 verified-beta structural checks passed.');
