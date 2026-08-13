@@ -10,6 +10,7 @@ const app = read('app-v52.js');
 const a11y = read('a11y-v52.js');
 const styles = read('styles-v52.css');
 const sw = read('sw-v52.js');
+const automation = read('automation-v611.js');
 const auth = read('auth-client.js');
 const api = read('api-client.js');
 const prelaunch = read('prelaunch-v61.js');
@@ -27,6 +28,7 @@ const stylesheets = [...index.matchAll(/<link[^>]+href="([^"]+\.css)"/g)].map(ma
 assert.deepEqual(scripts, [
   'polyfills-v52.js',
   'runtime-config.js',
+  'automation-v611.js',
   'auth-client.js',
   'api-client.js',
   'data.js',
@@ -52,6 +54,7 @@ for (const script of scripts.filter(script => script !== 'runtime-config.js')) {
 assert.ok(!sw.includes("'./runtime-config.js'"), 'runtime config must never be precached');
 assert.ok(sw.includes("pathname.startsWith('/v1/')") && sw.includes("pathname==='/runtime-config.js'"), 'network-only API/config policy missing');
 assert.ok(sw.includes("const VERSION='6.1.1'"), 'service-worker version mismatch');
+assert.ok(automation.includes('navigator.webdriver') && automation.includes('ServiceWorkerContainer.prototype'), 'automation must isolate service workers only under webdriver');
 
 assert.ok(core.includes('schemaVersion:7') || core.includes('schemaVersion: 7'));
 assert.ok(core.includes("throw new Error('REPLAY_EXISTS')") && core.includes('scoreReplay('));
