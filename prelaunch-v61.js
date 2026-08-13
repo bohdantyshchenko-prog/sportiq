@@ -1,37 +1,570 @@
 (() => {
   'use strict';
-  const N=window.NOVIQ=window.NOVIQ||{},R=window.NOVIQ_RUNTIME_CONFIG||{};
-  const PREVIEW='noviq-local-preview-v1';
-  let cloudMemory=[],busy=false;
-  const $=(s,r=document)=>r.querySelector(s);
-  const esc=v=>N.util?.escape?.(v)??String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const configured=()=>Boolean(N.auth?.configured?.()),cloudReady=()=>configured()&&Boolean(N.api?.configured?.()),preview=()=>localStorage.getItem(PREVIEW)==='1',user=()=>N.auth?.user?.()||null;
-  const cleanName=()=>{const n=String(N.state?.account?.displayName||'').trim();return !n||n==='Богдан Тищенко'?'Sports Analyst':n;};
-  const initials=n=>String(n||'Sports Analyst').trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()||'').join('')||'SA';
-  const C={
-    ru:{welcome:'Добро пожаловать в NOVIQ',sub:'Твой спортивный интеллект, решения и память — в одном профиле.',in:'Войти',up:'Создать аккаунт',email:'Email',password:'Пароль',newPassword:'Новый пароль',name:'Имя',forgot:'Забыли пароль?',recover:'Ссылка восстановления отправлена.',local:'Продолжить локальную beta',localNote:'Без аккаунта данные остаются только на этом устройстве.',cloudOff:'Cloud login станет доступен после настройки Supabase.',confirm:'Проверь email и подтверди аккаунт.',invalid:'Проверь введённые данные.',cloud:'Cloud account',preview:'Local preview',synced:'Синхронизировано',device:'Только на устройстве',edit:'Редактировать профиль',favorite:'Любимая команда',save:'Сохранить',memory:'Sports Memory',empty:'Заверши Replay — здесь появятся проверенные уроки.',signOut:'Выйти',sync:'Синхронизировать',delete:'Удалить cloud-данные',deleteTitle:'Удалить данные аккаунта?',deleteBody:'Профиль, Thesis, Replay и Memory в NOVIQ будут удалены. Сам Supabase-логин останется активным.',cancel:'Отмена',remove:'Удалить',resetTitle:'Задай новый пароль'},
-    uk:{welcome:'Ласкаво просимо до NOVIQ',sub:'Твій спортивний інтелект, рішення та памʼять — в одному профілі.',in:'Увійти',up:'Створити акаунт',email:'Email',password:'Пароль',newPassword:'Новий пароль',name:'Імʼя',forgot:'Забули пароль?',recover:'Посилання відновлення надіслано.',local:'Продовжити локальну beta',localNote:'Без акаунта дані залишаються лише на цьому пристрої.',cloudOff:'Cloud login стане доступним після налаштування Supabase.',confirm:'Перевір email і підтвердь акаунт.',invalid:'Перевір введені дані.',cloud:'Cloud account',preview:'Local preview',synced:'Синхронізовано',device:'Лише на пристрої',edit:'Редагувати профіль',favorite:'Улюблена команда',save:'Зберегти',memory:'Sports Memory',empty:'Заверши Replay — тут зʼявляться перевірені уроки.',signOut:'Вийти',sync:'Синхронізувати',delete:'Видалити cloud-дані',deleteTitle:'Видалити дані акаунта?',deleteBody:'Профіль, Thesis, Replay і Memory у NOVIQ буде видалено. Сам Supabase-логін залишиться активним.',cancel:'Скасувати',remove:'Видалити',resetTitle:'Задай новий пароль'},
-    en:{welcome:'Welcome to NOVIQ',sub:'Your sports intelligence, decisions and memory in one profile.',in:'Sign in',up:'Create account',email:'Email',password:'Password',newPassword:'New password',name:'Name',forgot:'Forgot password?',recover:'Recovery link sent.',local:'Continue local beta',localNote:'Without an account, data stays on this device only.',cloudOff:'Cloud login becomes available after Supabase is configured.',confirm:'Check your email to confirm the account.',invalid:'Check the information you entered.',cloud:'Cloud account',preview:'Local preview',synced:'Synced',device:'On this device',edit:'Edit profile',favorite:'Favorite team',save:'Save',memory:'Sports Memory',empty:'Complete a Replay to build verified memory.',signOut:'Sign out',sync:'Sync now',delete:'Delete cloud data',deleteTitle:'Delete account data?',deleteBody:'Your NOVIQ profile, Thesis, Replay and Memory will be deleted. The Supabase login itself stays active.',cancel:'Cancel',remove:'Delete',resetTitle:'Set a new password'}
-  };
-  const t=k=>(C[N.state?.language]||C.ru)[k]||k;
 
-  function gate(){
-    if($('#identityGate')||N.session||preview())return;
-    const cloud=configured(),wrap=document.createElement('div');wrap.id='identityGate';wrap.innerHTML=`<section class="identity-gate" role="dialog" aria-modal="true" aria-labelledby="identityTitle"><div class="identity-panel"><div class="identity-brand"><span class="identity-mark">N</span><div><b>NOVIQ</b><small>SPORTS DECISION INTELLIGENCE</small></div></div><div class="identity-copy"><span class="identity-kicker">CLOSED BETA</span><h1 id="identityTitle">${esc(t('welcome'))}</h1><p>${esc(t('sub'))}</p></div>${cloud?`<div class="identity-tabs"><button class="active" data-auth-tab="signin">${esc(t('in'))}</button><button data-auth-tab="signup">${esc(t('up'))}</button></div><form id="identityForm" data-mode="signin" novalidate><label class="identity-name" hidden>${esc(t('name'))}<input name="name" autocomplete="name" maxlength="80"></label><label>${esc(t('email'))}<input name="email" type="email" autocomplete="email" required></label><label>${esc(t('password'))}<input name="password" type="password" autocomplete="current-password" minlength="8" required></label><button class="identity-primary" type="submit">${esc(t('in'))}</button><button class="identity-link" type="button" data-auth-recover>${esc(t('forgot'))}</button><p class="identity-status" role="status" aria-live="polite"></p></form>`:`<div class="identity-offline"><b>${esc(t('cloudOff'))}</b><p>${esc(t('localNote'))}</p></div>`}${R.allowLocalPreview!==false?`<button class="identity-local" data-auth-local>${esc(t('local'))}</button>`:''}</div></section>`;document.body.append(wrap);document.body.classList.add('identity-locked');setTimeout(()=>$('#identityGate input,#identityGate [data-auth-local]')?.focus(),0);
+  const N = window.NOVIQ = window.NOVIQ || {};
+  const runtime = window.NOVIQ_RUNTIME_CONFIG || {};
+  const PREVIEW_KEY = 'noviq-local-preview-v1';
+  let cloudMemory = [];
+  let busy = false;
+  let profileRenderQueued = false;
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const escape = value => N.util?.escape?.(value) ?? String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+  const configured = () => Boolean(N.auth?.configured?.());
+  const cloudReady = () => configured() && Boolean(N.api?.configured?.());
+  const localPreview = () => localStorage.getItem(PREVIEW_KEY) === '1';
+  const currentUser = () => N.auth?.user?.() || null;
+
+  const copy = {
+    ru: {
+      welcome: 'Добро пожаловать в NOVIQ',
+      sub: 'Твой спортивный интеллект, решения и память — в одном профиле.',
+      signIn: 'Войти', signUp: 'Создать аккаунт', email: 'Email', password: 'Пароль', name: 'Имя',
+      forgot: 'Забыли пароль?', recoverySent: 'Ссылка восстановления отправлена.',
+      local: 'Продолжить локальную beta', localNote: 'Без аккаунта данные остаются только на этом устройстве.',
+      cloudOff: 'Cloud login станет доступен после настройки Supabase.', confirm: 'Проверь email и подтверди аккаунт.',
+      invalid: 'Проверь введённые данные.', profile: 'Профиль аналитика', cloud: 'Cloud account', preview: 'Local preview',
+      synced: 'Синхронизировано', deviceOnly: 'Только на устройстве', edit: 'Редактировать профиль',
+      favorite: 'Любимая команда', save: 'Сохранить', memory: 'Sports Memory',
+      memoryEmpty: 'Заверши Replay — здесь появятся проверенные уроки.', signOut: 'Выйти', sync: 'Синхронизировать',
+      deleteCloud: 'Удалить cloud-данные', deleteTitle: 'Удалить данные аккаунта?',
+      deleteBody: 'Профиль, Thesis, Replay и Memory в NOVIQ будут удалены. Сам Supabase-логин останется активным.',
+      cancel: 'Отмена', remove: 'Удалить', resetTitle: 'Задай новый пароль', newPassword: 'Новый пароль',
+      resetDone: 'Пароль обновлён.', authExpired: 'Сессия завершилась. Войди снова.', syncFailed: 'Cloud sync временно недоступен. Локальные данные сохранены.',
+      dataDeleted: 'Cloud-данные удалены.', decisionHistory: 'ИСТОРИЯ РЕШЕНИЙ', confidence: 'уверенность'
+    },
+    uk: {
+      welcome: 'Ласкаво просимо до NOVIQ',
+      sub: 'Твій спортивний інтелект, рішення та памʼять — в одному профілі.',
+      signIn: 'Увійти', signUp: 'Створити акаунт', email: 'Email', password: 'Пароль', name: 'Імʼя',
+      forgot: 'Забули пароль?', recoverySent: 'Посилання відновлення надіслано.',
+      local: 'Продовжити локальну beta', localNote: 'Без акаунта дані залишаються лише на цьому пристрої.',
+      cloudOff: 'Cloud login стане доступним після налаштування Supabase.', confirm: 'Перевір email і підтвердь акаунт.',
+      invalid: 'Перевір введені дані.', profile: 'Профіль аналітика', cloud: 'Cloud account', preview: 'Local preview',
+      synced: 'Синхронізовано', deviceOnly: 'Лише на пристрої', edit: 'Редагувати профіль',
+      favorite: 'Улюблена команда', save: 'Зберегти', memory: 'Sports Memory',
+      memoryEmpty: 'Заверши Replay — тут зʼявляться перевірені уроки.', signOut: 'Вийти', sync: 'Синхронізувати',
+      deleteCloud: 'Видалити cloud-дані', deleteTitle: 'Видалити дані акаунта?',
+      deleteBody: 'Профіль, Thesis, Replay і Memory у NOVIQ буде видалено. Сам Supabase-логін залишиться активним.',
+      cancel: 'Скасувати', remove: 'Видалити', resetTitle: 'Задай новий пароль', newPassword: 'Новий пароль',
+      resetDone: 'Пароль оновлено.', authExpired: 'Сесію завершено. Увійди знову.', syncFailed: 'Cloud sync тимчасово недоступний. Локальні дані збережено.',
+      dataDeleted: 'Cloud-дані видалено.', decisionHistory: 'ІСТОРІЯ РІШЕНЬ', confidence: 'впевненість'
+    },
+    en: {
+      welcome: 'Welcome to NOVIQ',
+      sub: 'Your sports intelligence, decisions and memory in one profile.',
+      signIn: 'Sign in', signUp: 'Create account', email: 'Email', password: 'Password', name: 'Name',
+      forgot: 'Forgot password?', recoverySent: 'Recovery link sent.',
+      local: 'Continue local beta', localNote: 'Without an account, data stays on this device only.',
+      cloudOff: 'Cloud login becomes available after Supabase is configured.', confirm: 'Check your email to confirm the account.',
+      invalid: 'Check the information you entered.', profile: 'Analyst profile', cloud: 'Cloud account', preview: 'Local preview',
+      synced: 'Synced', deviceOnly: 'On this device', edit: 'Edit profile',
+      favorite: 'Favorite team', save: 'Save', memory: 'Sports Memory',
+      memoryEmpty: 'Complete a Replay to build verified memory.', signOut: 'Sign out', sync: 'Sync now',
+      deleteCloud: 'Delete cloud data', deleteTitle: 'Delete account data?',
+      deleteBody: 'Your NOVIQ profile, Thesis, Replay and Memory will be deleted. The Supabase login itself stays active.',
+      cancel: 'Cancel', remove: 'Delete', resetTitle: 'Set a new password', newPassword: 'New password',
+      resetDone: 'Password updated.', authExpired: 'Your session ended. Sign in again.', syncFailed: 'Cloud sync is temporarily unavailable. Local data is safe.',
+      dataDeleted: 'Cloud data deleted.', decisionHistory: 'DECISION HISTORY', confidence: 'confidence'
+    }
+  };
+
+  const t = key => (copy[N.state?.language] || copy.ru)[key] || key;
+
+  const metadataName = () => {
+    const metadata = currentUser()?.user_metadata || currentUser()?.userMetadata || {};
+    return String(metadata.display_name || metadata.full_name || '').trim();
+  };
+
+  const displayName = () => {
+    const local = String(N.state?.account?.displayName || '').trim();
+    if (local && local !== 'Богдан Тищенко') return local;
+    return metadataName() || 'Sports Analyst';
+  };
+
+  const initials = name => String(name || 'Sports Analyst')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() || '')
+    .join('') || 'SA';
+
+  function gateMarkup() {
+    const cloud = configured();
+    return `<section class="identity-gate" role="dialog" aria-modal="true" aria-labelledby="identityTitle">
+      <div class="identity-panel">
+        <div class="identity-brand"><span class="identity-mark">N</span><div><b>NOVIQ</b><small>SPORTS DECISION INTELLIGENCE</small></div></div>
+        <div class="identity-copy"><span class="identity-kicker">CLOSED BETA</span><h1 id="identityTitle">${escape(t('welcome'))}</h1><p>${escape(t('sub'))}</p></div>
+        ${cloud ? `<div class="identity-tabs" role="tablist" aria-label="Account">
+          <button class="active" type="button" role="tab" aria-selected="true" data-auth-tab="signin">${escape(t('signIn'))}</button>
+          <button type="button" role="tab" aria-selected="false" data-auth-tab="signup">${escape(t('signUp'))}</button>
+        </div>
+        <form id="identityForm" data-mode="signin" novalidate>
+          <label class="identity-name" hidden>${escape(t('name'))}<input name="name" autocomplete="name" maxlength="80"></label>
+          <label>${escape(t('email'))}<input name="email" type="email" autocomplete="email" inputmode="email" required></label>
+          <label>${escape(t('password'))}<input name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+          <button class="identity-primary" type="submit">${escape(t('signIn'))}</button>
+          <button class="identity-link" type="button" data-auth-recover>${escape(t('forgot'))}</button>
+          <p class="identity-status" role="status" aria-live="polite"></p>
+        </form>` : `<div class="identity-offline"><b>${escape(t('cloudOff'))}</b><p>${escape(t('localNote'))}</p></div>`}
+        ${runtime.allowLocalPreview !== false ? `<button class="identity-local" type="button" data-auth-local>${escape(t('local'))}</button>` : ''}
+        <div class="identity-trust"><a href="privacy.html">Privacy</a><span>·</span><a href="terms.html">Beta Terms</a></div>
+      </div>
+    </section>`;
   }
-  const closeGate=()=>{document.body.classList.remove('identity-locked');$('#identityGate')?.remove();};
-  function syncPayload(){const a=N.state.account||{};return{profile:{displayName:cleanName(),favoriteTeam:a.favoriteTeam||null,locale:N.state.language,theme:N.state.theme,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',sportsIQ:Number(N.state.sportsIQ||0)},matches:(N.matches||[]).map(m=>({id:m.id,tournament:m.tournament,home:m.home,away:m.away,status:m.status,startsAt:new Date().toISOString(),payload:{demo:true,signals:m.signals||[],score:m.score||null,time:m.time||null}})),theses:(N.state.theses||[]).map(x=>({clientId:x.id,matchId:x.matchId,scenario:x.scenario,reason:x.reason,risk:x.risk,alternative:x.alternative||undefined,confidence:Number(x.confidence||65),createdAt:x.createdAt||undefined})),replays:(N.state.replays||[]).map(x=>({clientId:x.id,thesisClientId:x.thesisId,reflection:x.reflection||'Reviewed decision quality.',delta:Number(x.delta||0),evidence:x.score||{},createdAt:x.completedAt||x.createdAt||undefined}))};}
-  async function syncCloud(){if(!N.session||!cloudReady())return false;try{const result=await N.api.sync(syncPayload()),boot=await N.api.bootstrap();cloudMemory=Array.isArray(boot.memories)?boot.memories:[];N.state.account={...(N.state.account||{}),mode:'cloud',displayName:boot.profile?.displayName||cleanName(),favoriteTeam:boot.profile?.favoriteTeam||N.state.account?.favoriteTeam||null,email:user()?.email||boot.profile?.email||null,userId:user()?.id||boot.profile?.id||null,synced:true,cloudLastSyncAt:new Date().toISOString()};N.storage.save();N.platform?.track?.('cloud_sync',{theses:result.synced?.theses||0,replays:result.synced?.replays||0});return true;}catch(error){N.state.account={...(N.state.account||{}),mode:'cloud',email:user()?.email||null,synced:false};N.storage.save({backup:false});N.platform?.capture?.(error,{area:'cloud-sync'});return false;}}
-  const memories=()=>{const local=(N.state.replays||[]).slice(-5).reverse().map(r=>({sourceReplayId:r.id,title:'Decision Replay',summary:r.reflection||'Decision reviewed.',confidence:Math.max(0,Math.min(100,50+Number(r.delta||0))),createdAt:r.completedAt||r.createdAt})),ids=new Set(local.map(x=>x.sourceReplayId));return[...cloudMemory.filter(x=>!ids.has(x.sourceReplayId)),...local].slice(0,6);};
-  function profile(){const screen=$('[data-screen="profile"]');if(!screen)return;screen.querySelector('.prelaunch-profile')?.remove();screen.querySelector('.prelaunch-memory')?.remove();const old=screen.querySelector('.profile-card');if(!old)return;old.hidden=true;const cloud=Boolean(N.session),a=N.state.account||{},name=cleanName(),p=document.createElement('section');p.className='prelaunch-profile';p.innerHTML=`<div class="profile-identity"><div class="profile-avatar">${esc(initials(name))}</div><div><span class="account-pill ${cloud?'cloud':'local'}">${esc(cloud?t('cloud'):t('preview'))}</span><h2>${esc(name)}</h2><p>${esc(cloud?(user()?.email||a.email||''):t('localNote'))}</p></div></div><div class="profile-score"><small>SPORTS IQ</small><strong>${esc(N.util.format(N.state.sportsIQ))}</strong><span>${esc(cloud&&a.synced?t('synced'):t('device'))}</span></div><div class="profile-actions"><button data-prelaunch-edit>${esc(t('edit'))}</button>${cloud?`<button data-prelaunch-sync>${esc(t('sync'))}</button><button data-prelaunch-signout>${esc(t('signOut'))}</button><button class="danger-link" data-prelaunch-delete>${esc(t('delete'))}</button>`:configured()?`<button data-prelaunch-signin>${esc(t('in'))}</button>`:''}</div>`;old.insertAdjacentElement('beforebegin',p);const rows=memories(),m=document.createElement('section');m.className='prelaunch-memory';m.innerHTML=`<div class="prelaunch-head"><div><small>DECISION HISTORY</small><h3>${esc(t('memory'))}</h3></div><span>${rows.length}</span></div>${rows.length?`<div class="memory-list">${rows.map(x=>`<article><div><b>${esc(x.title||'Decision Replay')}</b><time>${esc(x.createdAt?new Date(x.createdAt).toLocaleDateString():'')}</time></div><p>${esc(x.summary)}</p><span>${esc(x.confidence)}% confidence</span></article>`).join('')}</div>`:`<p class="memory-empty">${esc(t('empty'))}</p>`}`;p.insertAdjacentElement('afterend',m);}
-  function edit(){let d=$('#prelaunchProfileDialog');if(!d){d=document.createElement('dialog');d.id='prelaunchProfileDialog';d.className='prelaunch-dialog';d.innerHTML=`<form><header><h2>${esc(t('edit'))}</h2><button type="button" data-close>×</button></header><label>${esc(t('name'))}<input name="displayName" maxlength="80" required></label><label>${esc(t('favorite'))}<input name="favoriteTeam" maxlength="100"></label><button class="identity-primary" type="submit">${esc(t('save'))}</button></form>`;document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.querySelector('form').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget),displayName=String(fd.get('displayName')||'').trim(),favoriteTeam=String(fd.get('favoriteTeam')||'').trim();if(!displayName)return;N.state.account={...(N.state.account||{}),displayName,favoriteTeam};N.storage.save();if(N.session&&N.api?.configured?.())try{await N.api.updateProfile({displayName,favoriteTeam:favoriteTeam||null,locale:N.state.language,theme:N.state.theme,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',sportsIQ:Number(N.state.sportsIQ||0)});N.state.account.synced=true;N.storage.save({backup:false});}catch(error){N.platform?.capture?.(error,{area:'profile-save'});}d.close();profile();};}d.querySelector('[name="displayName"]').value=cleanName();d.querySelector('[name="favoriteTeam"]').value=N.state.account?.favoriteTeam||'';d.showModal();}
-  function confirmDelete(){let d=$('#prelaunchDeleteDialog');if(!d){d=document.createElement('dialog');d.id='prelaunchDeleteDialog';d.className='prelaunch-dialog';d.innerHTML=`<div class="delete-copy"><h2>${esc(t('deleteTitle'))}</h2><p>${esc(t('deleteBody'))}</p><div><button data-cancel>${esc(t('cancel'))}</button><button class="danger" data-delete>${esc(t('remove'))}</button></div></div>`;document.body.append(d);d.querySelector('[data-cancel]').onclick=()=>d.close();d.querySelector('[data-delete]').onclick=async()=>{if(busy)return;busy=true;try{await N.api.deleteMyData();cloudMemory=[];N.state.account={mode:'cloud',displayName:cleanName(),email:user()?.email||null,synced:false};N.storage.save();d.close();profile();}catch(error){N.platform?.capture?.(error,{area:'delete-cloud'});}finally{busy=false;}};}d.showModal();}
-  function resetPassword(){if(N.authRedirect?.type!=='recovery')return;let d=document.createElement('dialog');d.className='prelaunch-dialog';d.innerHTML=`<form><header><h2>${esc(t('resetTitle'))}</h2></header><label>${esc(t('newPassword'))}<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="identity-primary" type="submit">${esc(t('save'))}</button><p role="status"></p></form>`;document.body.append(d);d.querySelector('form').onsubmit=async e=>{e.preventDefault();const status=$('[role="status"]',e.currentTarget);try{await N.auth.updatePassword(new FormData(e.currentTarget).get('password'));N.authRedirect=null;d.close();d.remove();}catch{status.textContent=t('invalid');}};d.showModal();}
-  async function afterIdentity(){if(N.session){N.state.account={...(N.state.account||{}),mode:'cloud',email:user()?.email||null,userId:user()?.id||null};N.storage.save({backup:false});await syncCloud();}else{N.state.account={...(N.state.account||{}),mode:'local',displayName:cleanName(),synced:false};N.storage.save({backup:false});}profile();resetPassword();}
-  async function submitAuth(form){if(busy)return;busy=true;const status=$('.identity-status',form);status.textContent='';try{const fd=new FormData(form),mode=form.dataset.mode;if(mode==='signup'){const r=await N.auth.signUp(fd.get('email'),fd.get('password'),fd.get('name'));if(r.pendingConfirmation){status.textContent=t('confirm');return;}}else await N.auth.signIn(fd.get('email'),fd.get('password'));localStorage.removeItem(PREVIEW);closeGate();await afterIdentity();}catch(error){status.textContent=t('invalid');N.platform?.capture?.(error,{area:'auth'});}finally{busy=false;}}
-  document.addEventListener('submit',e=>{if(e.target?.id==='identityForm'){e.preventDefault();void submitAuth(e.target);}},true);
-  document.addEventListener('click',e=>{const x=e.target.closest?.('[data-auth-tab],[data-auth-local],[data-auth-recover],[data-prelaunch-edit],[data-prelaunch-sync],[data-prelaunch-signout],[data-prelaunch-signin],[data-prelaunch-delete]');if(!x)return;if(x.dataset.authTab){const f=$('#identityForm'),signup=x.dataset.authTab==='signup';f.dataset.mode=x.dataset.authTab;$('.identity-name',f).hidden=!signup;f.password.autocomplete=signup?'new-password':'current-password';$('.identity-primary',f).textContent=t(signup?'up':'in');$$?.noop;$('#identityGate [data-auth-tab="signin"]').classList.toggle('active',!signup);$('#identityGate [data-auth-tab="signup"]').classList.toggle('active',signup);return;}if(x.hasAttribute('data-auth-local')){localStorage.setItem(PREVIEW,'1');closeGate();void afterIdentity();return;}if(x.hasAttribute('data-auth-recover')){const f=$('#identityForm'),s=$('.identity-status',f);void N.auth.recover(new FormData(f).get('email')).then(()=>s.textContent=t('recover')).catch(()=>s.textContent=t('invalid'));return;}if(x.hasAttribute('data-prelaunch-edit'))edit();if(x.hasAttribute('data-prelaunch-sync'))void syncCloud().then(profile);if(x.hasAttribute('data-prelaunch-signout'))void N.auth.signOut().then(()=>{localStorage.removeItem(PREVIEW);N.state.account={mode:'local',displayName:cleanName(),synced:false};N.storage.save({backup:false});gate();profile();});if(x.hasAttribute('data-prelaunch-signin')){localStorage.removeItem(PREVIEW);gate();}if(x.hasAttribute('data-prelaunch-delete'))confirmDelete();},true);
-  document.addEventListener('click',()=>setTimeout(profile,0),true);
-  window.addEventListener('DOMContentLoaded',()=>setTimeout(async()=>{if(N.state?.account?.displayName==='Богдан Тищенко'){N.state.account.displayName='Sports Analyst';N.storage.save({backup:false});}gate();await afterIdentity();},0));
-  N.identity={sync:syncCloud,openLogin:()=>{localStorage.removeItem(PREVIEW);gate();},deleteCloudData:confirmDelete};
+
+  function openGate(force = false, message = '') {
+    if ($('#identityGate')) return;
+    if (!force && (N.session || localPreview())) return;
+    const wrapper = document.createElement('div');
+    wrapper.id = 'identityGate';
+    wrapper.innerHTML = gateMarkup();
+    document.body.append(wrapper);
+    document.body.classList.add('identity-locked');
+    if (message) $('.identity-status', wrapper)?.replaceChildren(document.createTextNode(message));
+    setTimeout(() => $('#identityGate input, #identityGate [data-auth-local]')?.focus(), 0);
+  }
+
+  function closeGate() {
+    document.body.classList.remove('identity-locked');
+    $('#identityGate')?.remove();
+  }
+
+  function setAuthMode(mode) {
+    const form = $('#identityForm');
+    if (!form || !['signin', 'signup'].includes(mode)) return;
+    form.dataset.mode = mode;
+    const signup = mode === 'signup';
+    const nameLabel = $('.identity-name', form);
+    if (nameLabel) nameLabel.hidden = !signup;
+    const password = $('[name="password"]', form);
+    if (password) password.autocomplete = signup ? 'new-password' : 'current-password';
+    const submit = $('button[type="submit"]', form);
+    if (submit) submit.textContent = t(signup ? 'signUp' : 'signIn');
+    document.querySelectorAll('[data-auth-tab]').forEach(button => {
+      const active = button.dataset.authTab === mode;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+    const status = $('.identity-status', form);
+    if (status) status.textContent = '';
+  }
+
+  function syncPayload() {
+    const account = N.state.account || {};
+    return {
+      profile: {
+        displayName: displayName(),
+        favoriteTeam: account.favoriteTeam || null,
+        locale: N.state.language,
+        theme: N.state.theme,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        sportsIQ: Number(N.state.sportsIQ || 0)
+      },
+      theses: (N.state.theses || []).map(item => ({
+        clientId: item.id,
+        matchId: item.matchId,
+        scenario: item.scenario,
+        reason: item.reason,
+        risk: item.risk,
+        alternative: item.alternative || undefined,
+        confidence: Number(item.confidence || 65),
+        createdAt: item.createdAt || undefined
+      })),
+      replays: (N.state.replays || []).map(item => ({
+        clientId: item.id,
+        thesisClientId: item.thesisId,
+        reflection: item.reflection || 'Reviewed decision quality.',
+        delta: Number(item.delta || 0),
+        evidence: item.score || {},
+        createdAt: item.completedAt || item.createdAt || undefined
+      }))
+    };
+  }
+
+  async function syncCloud({ quiet = false } = {}) {
+    if (!N.session || !cloudReady()) return false;
+    try {
+      const result = await N.api.sync(syncPayload());
+      const bootstrap = await N.api.bootstrap();
+      cloudMemory = Array.isArray(bootstrap.memories) ? bootstrap.memories : [];
+      N.state.account = {
+        ...(N.state.account || {}),
+        mode: 'cloud',
+        displayName: bootstrap.profile?.displayName || displayName(),
+        favoriteTeam: bootstrap.profile?.favoriteTeam || N.state.account?.favoriteTeam || null,
+        email: currentUser()?.email || bootstrap.profile?.email || null,
+        userId: currentUser()?.id || bootstrap.profile?.id || null,
+        synced: true,
+        cloudLastSyncAt: new Date().toISOString()
+      };
+      N.storage.save();
+      N.platform?.track?.('cloud_sync', {
+        theses: result.synced?.theses || 0,
+        replays: result.synced?.replays || 0
+      });
+      queueProfileRender();
+      return true;
+    } catch (error) {
+      N.state.account = {
+        ...(N.state.account || {}),
+        mode: 'cloud',
+        email: currentUser()?.email || null,
+        synced: false
+      };
+      N.storage.save({ backup: false });
+      N.platform?.capture?.(error, { area: 'cloud-sync' });
+      if (!quiet) N.platform?.track?.('cloud_sync_failed', { code: error?.code || 'unknown' });
+      queueProfileRender();
+      return false;
+    }
+  }
+
+  function memoryRows() {
+    const local = (N.state.replays || []).slice(-8).reverse().map(replay => ({
+      sourceReplayId: replay.id,
+      title: 'Decision Replay',
+      summary: replay.reflection || 'Decision reviewed.',
+      confidence: Math.max(0, Math.min(100, 50 + Number(replay.delta || 0))),
+      createdAt: replay.completedAt || replay.createdAt
+    }));
+    const localIds = new Set(local.map(item => item.sourceReplayId));
+    return [...cloudMemory.filter(item => !localIds.has(item.sourceReplayId)), ...local].slice(0, 8);
+  }
+
+  function renderProfile() {
+    const screen = $('[data-screen="profile"]');
+    if (!screen) return;
+    const oldCard = $('.profile-card', screen);
+    if (!oldCard) return;
+
+    $('.prelaunch-profile', screen)?.remove();
+    $('.prelaunch-memory', screen)?.remove();
+    oldCard.hidden = true;
+
+    const account = N.state.account || {};
+    const cloud = Boolean(N.session);
+    const name = displayName();
+    const profile = document.createElement('section');
+    profile.className = 'prelaunch-profile';
+    profile.innerHTML = `<div class="profile-identity">
+      <div class="profile-avatar" aria-hidden="true">${escape(initials(name))}</div>
+      <div><span class="account-pill ${cloud ? 'cloud' : 'local'}">${escape(cloud ? t('cloud') : t('preview'))}</span><h2>${escape(name)}</h2><p>${escape(cloud ? (currentUser()?.email || account.email || '') : t('localNote'))}</p></div>
+    </div>
+    <div class="profile-score"><small>SPORTS IQ</small><strong>${escape(N.util.format(N.state.sportsIQ))}</strong><span>${escape(cloud && account.synced ? t('synced') : t('deviceOnly'))}</span></div>
+    <div class="profile-actions">
+      <button type="button" data-prelaunch-edit>${escape(t('edit'))}</button>
+      ${cloud ? `<button type="button" data-prelaunch-sync>${escape(t('sync'))}</button><button type="button" data-prelaunch-signout>${escape(t('signOut'))}</button><button class="danger-link" type="button" data-prelaunch-delete>${escape(t('deleteCloud'))}</button>` : configured() ? `<button type="button" data-prelaunch-signin>${escape(t('signIn'))}</button>` : ''}
+    </div>`;
+    oldCard.insertAdjacentElement('beforebegin', profile);
+
+    const rows = memoryRows();
+    const memory = document.createElement('section');
+    memory.className = 'prelaunch-memory';
+    memory.innerHTML = `<div class="prelaunch-head"><div><small>${escape(t('decisionHistory'))}</small><h3>${escape(t('memory'))}</h3></div><span>${rows.length}</span></div>
+      ${rows.length ? `<div class="memory-list">${rows.map(item => `<article><div><b>${escape(item.title || 'Decision Replay')}</b><time>${escape(item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '')}</time></div><p>${escape(item.summary)}</p><span>${escape(item.confidence)}% ${escape(t('confidence'))}</span></article>`).join('')}</div>` : `<p class="memory-empty">${escape(t('memoryEmpty'))}</p>`}`;
+    profile.insertAdjacentElement('afterend', memory);
+  }
+
+  function queueProfileRender() {
+    if (profileRenderQueued) return;
+    profileRenderQueued = true;
+    requestAnimationFrame(() => {
+      profileRenderQueued = false;
+      renderProfile();
+    });
+  }
+
+  function profileDialog() {
+    let dialog = $('#prelaunchProfileDialog');
+    if (dialog) return dialog;
+    dialog = document.createElement('dialog');
+    dialog.id = 'prelaunchProfileDialog';
+    dialog.className = 'prelaunch-dialog';
+    dialog.innerHTML = `<form>
+      <header><h2>${escape(t('edit'))}</h2><button type="button" data-close aria-label="${escape(N.t?.('close') || 'Close')}">×</button></header>
+      <label>${escape(t('name'))}<input name="displayName" maxlength="80" autocomplete="name" required></label>
+      <label>${escape(t('favorite'))}<input name="favoriteTeam" maxlength="100"></label>
+      <button class="identity-primary" type="submit">${escape(t('save'))}</button>
+      <p role="status" aria-live="polite"></p>
+    </form>`;
+    document.body.append(dialog);
+    $('[data-close]', dialog).addEventListener('click', () => dialog.close());
+    $('form', dialog).addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const data = new FormData(form);
+      const name = String(data.get('displayName') || '').trim();
+      const favoriteTeam = String(data.get('favoriteTeam') || '').trim();
+      if (!name || busy) return;
+      busy = true;
+      try {
+        N.state.account = { ...(N.state.account || {}), displayName: name, favoriteTeam };
+        N.storage.save();
+        if (N.session && N.api?.configured?.()) {
+          await N.api.updateProfile({
+            displayName: name,
+            favoriteTeam: favoriteTeam || null,
+            locale: N.state.language,
+            theme: N.state.theme,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            sportsIQ: Number(N.state.sportsIQ || 0)
+          });
+          N.state.account.synced = true;
+          N.state.account.cloudLastSyncAt = new Date().toISOString();
+          N.storage.save({ backup: false });
+        }
+        dialog.close();
+        queueProfileRender();
+      } catch (error) {
+        $('[role="status"]', form).textContent = t('syncFailed');
+        N.platform?.capture?.(error, { area: 'profile-save' });
+      } finally {
+        busy = false;
+      }
+    });
+    return dialog;
+  }
+
+  function editProfile() {
+    const dialog = profileDialog();
+    $('[name="displayName"]', dialog).value = displayName();
+    $('[name="favoriteTeam"]', dialog).value = N.state.account?.favoriteTeam || '';
+    $('[role="status"]', dialog).textContent = '';
+    dialog.showModal();
+    setTimeout(() => $('[name="displayName"]', dialog)?.focus(), 0);
+  }
+
+  function confirmDeleteCloud() {
+    let dialog = $('#prelaunchDeleteDialog');
+    if (!dialog) {
+      dialog = document.createElement('dialog');
+      dialog.id = 'prelaunchDeleteDialog';
+      dialog.className = 'prelaunch-dialog';
+      dialog.innerHTML = `<div class="delete-copy"><h2>${escape(t('deleteTitle'))}</h2><p>${escape(t('deleteBody'))}</p><div><button type="button" data-cancel>${escape(t('cancel'))}</button><button class="danger" type="button" data-delete>${escape(t('remove'))}</button></div><p role="status" aria-live="polite"></p></div>`;
+      document.body.append(dialog);
+      $('[data-cancel]', dialog).addEventListener('click', () => dialog.close());
+      $('[data-delete]', dialog).addEventListener('click', async () => {
+        if (busy || !N.session || !N.api?.configured?.()) return;
+        busy = true;
+        try {
+          await N.api.deleteMyData();
+          cloudMemory = [];
+          N.state.account = {
+            mode: 'cloud',
+            displayName: displayName(),
+            email: currentUser()?.email || null,
+            synced: false
+          };
+          N.storage.save();
+          $('[role="status"]', dialog).textContent = t('dataDeleted');
+          setTimeout(() => {
+            dialog.close();
+            queueProfileRender();
+          }, 500);
+        } catch (error) {
+          $('[role="status"]', dialog).textContent = t('syncFailed');
+          N.platform?.capture?.(error, { area: 'delete-cloud' });
+        } finally {
+          busy = false;
+        }
+      });
+    }
+    $('[role="status"]', dialog).textContent = '';
+    dialog.showModal();
+  }
+
+  function showRecoveryDialog() {
+    if (N.authRedirect?.type !== 'recovery' || !N.session || $('#prelaunchRecoveryDialog')) return;
+    const dialog = document.createElement('dialog');
+    dialog.id = 'prelaunchRecoveryDialog';
+    dialog.className = 'prelaunch-dialog';
+    dialog.innerHTML = `<form><header><h2>${escape(t('resetTitle'))}</h2></header><label>${escape(t('newPassword'))}<input name="password" type="password" minlength="8" autocomplete="new-password" required></label><button class="identity-primary" type="submit">${escape(t('save'))}</button><p role="status" aria-live="polite"></p></form>`;
+    document.body.append(dialog);
+    $('form', dialog).addEventListener('submit', async event => {
+      event.preventDefault();
+      if (busy) return;
+      busy = true;
+      const status = $('[role="status"]', dialog);
+      try {
+        await N.auth.updatePassword(new FormData(event.currentTarget).get('password'));
+        N.authRedirect = null;
+        status.textContent = t('resetDone');
+        setTimeout(() => {
+          dialog.close();
+          dialog.remove();
+        }, 650);
+      } catch (error) {
+        status.textContent = t('invalid');
+        N.platform?.capture?.(error, { area: 'password-recovery' });
+      } finally {
+        busy = false;
+      }
+    });
+    dialog.showModal();
+    setTimeout(() => $('[name="password"]', dialog)?.focus(), 0);
+  }
+
+  async function afterIdentity({ sync = true } = {}) {
+    if (N.session) {
+      N.state.account = {
+        ...(N.state.account || {}),
+        mode: 'cloud',
+        displayName: displayName(),
+        email: currentUser()?.email || null,
+        userId: currentUser()?.id || null
+      };
+      N.storage.save({ backup: false });
+      if (sync) await syncCloud({ quiet: true });
+    } else {
+      N.state.account = {
+        ...(N.state.account || {}),
+        mode: 'local',
+        displayName: displayName(),
+        synced: false
+      };
+      N.storage.save({ backup: false });
+    }
+    queueProfileRender();
+    showRecoveryDialog();
+  }
+
+  async function submitAuth(form) {
+    if (busy) return;
+    busy = true;
+    const status = $('.identity-status', form);
+    status.textContent = '';
+    try {
+      const data = new FormData(form);
+      const mode = form.dataset.mode;
+      if (mode === 'signup') {
+        const result = await N.auth.signUp(data.get('email'), data.get('password'), data.get('name'));
+        if (result.pendingConfirmation) {
+          status.textContent = t('confirm');
+          return;
+        }
+      } else {
+        await N.auth.signIn(data.get('email'), data.get('password'));
+      }
+      localStorage.removeItem(PREVIEW_KEY);
+      closeGate();
+      await afterIdentity({ sync: true });
+    } catch (error) {
+      status.textContent = t('invalid');
+      N.platform?.capture?.(error, { area: 'auth-submit', code: error?.code || 'unknown' });
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function sendRecovery(form) {
+    if (busy) return;
+    busy = true;
+    const status = $('.identity-status', form);
+    try {
+      const email = new FormData(form).get('email');
+      await N.auth.recover(email);
+      status.textContent = t('recoverySent');
+    } catch (error) {
+      status.textContent = t('invalid');
+      N.platform?.capture?.(error, { area: 'auth-recovery', code: error?.code || 'unknown' });
+    } finally {
+      busy = false;
+    }
+  }
+
+  document.addEventListener('submit', event => {
+    if (event.target?.id !== 'identityForm') return;
+    event.preventDefault();
+    void submitAuth(event.target);
+  });
+
+  document.addEventListener('click', event => {
+    const tab = event.target.closest?.('[data-auth-tab]');
+    if (tab) {
+      setAuthMode(tab.dataset.authTab);
+      return;
+    }
+    if (event.target.closest?.('[data-auth-local]')) {
+      localStorage.setItem(PREVIEW_KEY, '1');
+      closeGate();
+      void afterIdentity({ sync: false });
+      return;
+    }
+    if (event.target.closest?.('[data-auth-recover]')) {
+      const form = $('#identityForm');
+      if (form) void sendRecovery(form);
+      return;
+    }
+    if (event.target.closest?.('[data-prelaunch-edit]')) {
+      editProfile();
+      return;
+    }
+    if (event.target.closest?.('[data-prelaunch-sync]')) {
+      void syncCloud();
+      return;
+    }
+    if (event.target.closest?.('[data-prelaunch-signout]')) {
+      void (async () => {
+        await N.auth.signOut();
+        N.state.account = { ...(N.state.account || {}), mode: 'local', synced: false, email: null, userId: null };
+        N.storage.save({ backup: false });
+        openGate(true);
+        queueProfileRender();
+      })();
+      return;
+    }
+    if (event.target.closest?.('[data-prelaunch-signin]')) {
+      openGate(true);
+      return;
+    }
+    if (event.target.closest?.('[data-prelaunch-delete]')) {
+      confirmDeleteCloud();
+      return;
+    }
+    if (event.target.closest?.('[data-nav="profile"], [data-action="profile"]')) {
+      setTimeout(queueProfileRender, 0);
+    }
+  }, { capture: true });
+
+  window.addEventListener('noviq:auth', event => {
+    const reason = event.detail?.reason || '';
+    if (reason === 'refresh') {
+      queueProfileRender();
+      return;
+    }
+    if (reason === 'expired') {
+      N.state.account = { ...(N.state.account || {}), mode: 'local', synced: false, email: null, userId: null };
+      N.storage.save({ backup: false });
+      openGate(true, t('authExpired'));
+      queueProfileRender();
+      return;
+    }
+    if (reason === 'signout') {
+      queueProfileRender();
+    }
+  });
+
+  window.addEventListener('noviq:auth-redirect', () => {
+    if (N.session) {
+      closeGate();
+      void afterIdentity({ sync: true });
+    } else if (N.authRedirect?.error) {
+      openGate(true, t('invalid'));
+    }
+  });
+
+  const observer = new MutationObserver(() => {
+    const screen = $('[data-screen="profile"]');
+    if (screen && !$('.prelaunch-profile', screen)) queueProfileRender();
+  });
+
+  window.addEventListener('DOMContentLoaded', () => {
+    observer.observe(document.body, { childList: true, subtree: true });
+    if (N.authRedirect?.error) openGate(true, t('invalid'));
+    else if (!N.session && !localPreview()) openGate();
+    void afterIdentity({ sync: Boolean(N.session) });
+  });
 })();
