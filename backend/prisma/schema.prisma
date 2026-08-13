@@ -8,17 +8,21 @@ datasource db {
 }
 
 model Profile {
-  id          String   @id @db.Uuid
-  email       String?  @unique
-  displayName String?
-  locale      String   @default("ru")
-  theme       String   @default("dark")
-  sportsIQ    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  theses      Thesis[]
-  memories    Memory[]
-  pushDevices PushDevice[]
+  id           String   @id @db.Uuid
+  email        String?  @unique
+  displayName  String?
+  avatarSeed   String?
+  favoriteTeam String?
+  locale       String   @default("ru")
+  theme        String   @default("dark")
+  timezone     String   @default("UTC")
+  sportsIQ     Int      @default(0)
+  lastSeenAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  theses       Thesis[]
+  memories     Memory[]
+  pushDevices  PushDevice[]
 }
 
 model Match {
@@ -41,6 +45,7 @@ model Match {
 
 model Thesis {
   id          String   @id @default(uuid()) @db.Uuid
+  clientId    String?  @unique
   profileId   String   @db.Uuid
   matchId     String
   scenario    String
@@ -61,6 +66,7 @@ model Thesis {
 
 model Replay {
   id         String   @id @default(uuid()) @db.Uuid
+  clientId   String?  @unique
   thesisId   String   @unique @db.Uuid
   outcome    String
   reflection String
@@ -71,15 +77,17 @@ model Replay {
 }
 
 model Memory {
-  id         String   @id @default(uuid()) @db.Uuid
-  profileId  String   @db.Uuid
-  kind       String
-  title      String
-  summary    String
-  confidence Int
-  evidence   Json
-  createdAt  DateTime @default(now())
-  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid()) @db.Uuid
+  profileId      String   @db.Uuid
+  sourceReplayId String?  @unique
+  kind           String
+  title          String
+  summary        String
+  confidence     Int
+  evidence       Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@index([profileId, createdAt])
 }
