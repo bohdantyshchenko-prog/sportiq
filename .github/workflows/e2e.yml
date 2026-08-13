@@ -38,7 +38,7 @@ jobs:
           done
           cat /tmp/noviq-server.log
           exit 1
-      - name: Run persisted decision loop and beta workflow
+      - name: Run persisted decision loop, identity and beta workflow
         env:
           BROWSER: ${{ matrix.browser }}
         run: |
@@ -49,9 +49,13 @@ jobs:
           const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
           const page = await context.newPage();
           await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+          await page.locator('#identityGate').waitFor();
+          if (!(await page.locator('[data-auth-local]').count())) throw new Error('Local preview fallback missing when cloud auth is not configured');
+          await page.locator('[data-auth-local]').click();
           await page.getByTestId('start-onboarding').click();
           await page.locator('[data-action="diagnostic"][data-value="70"]').click();
           await page.reload({ waitUntil: 'networkidle' });
+          if (await page.locator('#identityGate').count()) throw new Error('Local preview choice did not persist');
           if (await page.getByTestId('start-onboarding').count()) throw new Error('Onboarding did not persist');
           await page.getByTestId('continue-loop').click();
           await page.getByTestId('briefing').waitFor();
@@ -78,6 +82,10 @@ jobs:
           await page.locator('[data-action="ask"]').click();
           await page.locator('#aiResult .ai-answer').waitFor();
           await page.locator('[data-nav="profile"]').click();
+          await page.locator('.prelaunch-profile').waitFor();
+          await page.locator('.prelaunch-memory article').first().waitFor();
+          const profileText = await page.locator('.prelaunch-profile').textContent();
+          if (!profileText.includes('Local preview') && !profileText.includes('Local')) throw new Error('Identity status missing from profile');
           await page.locator('[data-mvp-action="feedback"]').waitFor();
           await page.locator('[data-mvp-action="feedback"]').click();
           await page.locator('#mvpFeedbackDialog textarea[name="problem"]').fill('The value is clear; I want more match variety.');
