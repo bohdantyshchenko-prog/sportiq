@@ -1,7 +1,7 @@
 {
-  "name": "NOVIQ 6 MVP — Sports Decision Intelligence",
+  "name": "NOVIQ 6.1 — Sports Decision Intelligence",
   "short_name": "NOVIQ",
-  "description": "Closed-beta offline sports decision intelligence with Match Thesis, Decision Replay, Sports IQ and local feedback.",
+  "description": "Closed-beta sports decision intelligence with optional cloud identity, durable decision memory and offline continuity.",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
