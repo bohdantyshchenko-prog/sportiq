@@ -1,0 +1,14 @@
+/* NOVIQ 6.1.1 verification shell.
+   The identity wrapper owns a real viewport box so browser visibility,
+   focus and E2E semantics match the visible child dialog. */
+#identityGate {
+  position: fixed;
+  inset: 0;
+  z-index: 4999;
+  display: block;
+  pointer-events: none;
+}
+
+#identityGate > .identity-gate {
+  pointer-events: auto;
+}
