@@ -1,1 +1,22 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090b0f"><title>NOVIQ Privacy</title><style>body{margin:0;background:#090b0f;color:#f5f7fa;font:16px/1.65 system-ui;padding:32px}main{max-width:720px;margin:auto}a{color:#b9ff66}h1{font-size:clamp(2rem,6vw,4rem);line-height:1}.card{background:#14171c;border:1px solid #2a2f37;border-radius:24px;padding:24px;margin:20px 0}small{color:#9ba3af}</style></head><body><main><a href="index.html">← NOVIQ</a><h1>Privacy</h1><p>Effective date: August 6, 2026.</p><div class="card"><h2>Local storage</h2><p>The closed-beta build stores profile settings, Match Theses, Decision Replays, Sports IQ, local diagnostics, and optional beta feedback on the current device.</p></div><div class="card"><h2>No external analytics</h2><p>This offline build does not send telemetry, questions, feedback, or sports decisions to an external server. Clearing browser storage or resetting NOVIQ removes local data unless the user exported a backup.</p></div><div class="card"><h2>User control</h2><p>Users can export, import, inspect, and delete their local progress from the Profile screen.</p></div><small>This page is a beta disclosure, not a substitute for jurisdiction-specific legal review before a public commercial release.</small></main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090b0f">
+  <title>NOVIQ Privacy</title>
+  <style>body{margin:0;background:#090b0f;color:#f5f7fa;font:16px/1.65 system-ui;padding:32px}main{max-width:760px;margin:auto}a{color:#b9ff66}h1{font-size:clamp(2rem,6vw,4rem);line-height:1}.card{background:#14171c;border:1px solid #2a2f37;border-radius:24px;padding:24px;margin:20px 0}small{color:#9ba3af}</style>
+</head>
+<body><main>
+  <a href="index.html">← NOVIQ</a>
+  <h1>Privacy</h1>
+  <p>Effective date: August 13, 2026.</p>
+  <div class="card"><h2>Local Preview</h2><p>If you choose Local Preview, NOVIQ stores profile settings, Match Theses, Decision Replays, Sports IQ, local diagnostics, beta metrics, and optional feedback in browser storage on that device. These product records are not synchronized to the NOVIQ backend.</p></div>
+  <div class="card"><h2>Cloud Account</h2><p>If cloud login is enabled and you create or use an account, authentication is handled by Supabase Auth. NOVIQ may synchronize your email identifier, display name, locale, theme, timezone, favorite team, Sports IQ, Match Theses, Decision Replays, and derived Sports Memory to the NOVIQ API and PostgreSQL database. The current closed beta still uses curated demonstration sports data unless explicitly stated otherwise in the app.</p></div>
+  <div class="card"><h2>Authentication data</h2><p>NOVIQ never stores your password in product storage. The browser keeps the authentication session required to remain signed in. Authentication requests are not cached by the NOVIQ service worker.</p></div>
+  <div class="card"><h2>Diagnostics and feedback</h2><p>Product telemetry and crash diagnostics are bounded and local-only in this build. Optional beta feedback also remains local unless you deliberately export or share a beta report. Email-like strings are redacted from local telemetry where supported.</p></div>
+  <div class="card"><h2>AI and sports providers</h2><p>The beta can run without external AI or sports providers. If those integrations are enabled later, the app must identify that state. Server AI requests may include the sports context or Thesis content required to answer the request; passwords and authentication tokens must not be sent to AI providers.</p></div>
+  <div class="card"><h2>Your controls</h2><p>You can export or reset local progress. A signed-in user can request deletion of NOVIQ cloud profile data, Thesis, Replay, Memory, and related product records from the Profile screen. This beta deletion does not delete the underlying Supabase authentication identity itself.</p></div>
+  <div class="card"><h2>Security and retention</h2><p>NOVIQ uses authenticated API requests, per-user ownership checks, rate limits, no-store API responses, restricted browser permissions, and transport security headers. Closed-beta data should be retained only as long as needed to operate and evaluate the beta. A public commercial launch requires a finalized retention schedule and jurisdiction-specific privacy review.</p></div>
+  <small>This is a closed-beta privacy disclosure and not a substitute for professional legal review before a public commercial release.</small>
+</main></body></html>
